@@ -107,7 +107,7 @@ def search_package(package_name, include_normal_packages=True):
 def remove_package(package_name):
     os.system(f'sudo pacman -R {package_name}')
 
-help_ = """help_ = AURget - A simple AUR helper written in Python.
+help_ = """AURget - A simple AUR helper written in Python.
 
 Valid operations are install, search, and remove."""
 
