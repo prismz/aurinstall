@@ -2,6 +2,7 @@
 A simple AUR helper written in Python
 
 Installation:
+
 Option 1:
 Copy the script somewhere, and add an alias to your .bashrc, .zshrc, etc.
 
