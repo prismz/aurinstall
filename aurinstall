@@ -83,7 +83,7 @@ class Package:
                 return
 
 
-        package_path = f'{home_folder}/.cache/aurget/{self.name}/'
+        package_path = f'{home_folder}/.cache/aurinstall/{self.name}/'
         result = os.system(f'git clone {self.get_clone_url()} {package_path}')
 
         if result: # failure (non-zero return code)
@@ -131,7 +131,7 @@ def update():
             new_pkg_ver = p.metadata['results'][0]['Version']
 
             if new_pkg_ver != pkg_ver:
-                os.system(f'rm -rf {home_folder}/.cache/aurget/{p.name}')
+                os.system(f'rm -rf {home_folder}/.cache/aurinstall/{p.name}')
                 p.install()
             else:
                 print(f'no updates found for package {p.name} - (matching versions {pkg_ver} and {new_pkg_ver})')
