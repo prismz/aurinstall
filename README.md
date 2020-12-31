@@ -1,6 +1,8 @@
 # aurinstall
 A simple AUR helper written in Python
 
+Valid operations are install, search, update, and remove.
+
 Installation:
 
 Option 1:
