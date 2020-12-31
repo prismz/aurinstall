@@ -77,7 +77,7 @@ class Package:
             print(f'error: target not found: {self.name}')
             return
 
-        if self.metadata['OutOfDate'] not in (None, 'null'):
+        if self.metadata['results'][0]['OutOfDate'] not in (None, 'null'):
             x = input(f'warning: package {self.name} is out of date. Continue? [y/N]')
             if x.lower() != 'y':
                 return
