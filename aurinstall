@@ -18,24 +18,27 @@ if not home_folder.startswith('/home/'): # something went VERY wrong
 
 
 def pretty_print(text, indent=4, first_indent=4):
-    termwidth = os.get_terminal_size().columns - indent
-    words = [i for i in text.split(' ')]
+    try:
+        termwidth = os.get_terminal_size().columns - indent
+        words = [i for i in text.split(' ')]
 
-    print(' ' * first_indent, end='')
-    i = 0
-    for index, word in enumerate(words):
-        print(word, end=' ')
-        i += len(word) + 1
+        print(' ' * first_indent, end='')
+        i = 0
+        for index, word in enumerate(words):
+            print(word, end=' ')
+            i += len(word) + 1
 
-        try:
-            if i + (len(words[index + 1]) + 1) >= termwidth:
-                print('')
-                print(' ' * indent, end='')
-                i = 0
-        except IndexError:
-            pass
+            try:
+                if i + (len(words[index + 1]) + 1) >= termwidth:
+                    print('')
+                    print(' ' * indent, end='')
+                    i = 0
+            except IndexError:
+                pass
 
-    print('')
+        print('')
+    except OSError:
+        pass
 
 
 class Package:
