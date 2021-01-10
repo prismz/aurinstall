@@ -16,6 +16,8 @@ if not home_folder.startswith('/home/'): # something went VERY wrong
     print('error: could not expand home folder.')
     exit(1)
 
+if not os.path.exists(f'{home_folder}/.cache/aurinstall/'):
+    os.mkdir(f'{home_folder}/.cache/aurinstall')
 
 def pretty_print(text, indent=4, first_indent=4):
     try:
@@ -37,7 +39,7 @@ def pretty_print(text, indent=4, first_indent=4):
                 pass
 
         print('')
-    except OSError:
+    except OSError: # getting terminal width will throw an error when using pipes
         pass
 
 
@@ -123,6 +125,35 @@ def remove_package(package_name):
     os.system(f'sudo pacman -R {package_name}')
 
 
+def clean():
+    cache_path = f'{home_folder}/.cache/aurinstall/'
+    packages_in_cache = os.listdir(cache_path)
+    if len(packages_in_cache) == 0:
+        print('no packages in cache.')
+        return
+
+    print(f'{RED}WARNING{ENDC}: you are about to delete the cache of the following packages: ')
+
+    for pkg in packages_in_cache:
+        print(pkg)
+
+    x = input('\nAre you sure you want to continue? [Y/n] ')
+    if x.lower() == '' or x.lower() == 'y':
+        for pkg in packages_in_cache:
+            os.system(f'rm -rf {cache_path}{pkg}/')
+            print(f'deleted package cache at path: {cache_path}{pkg}/')
+
+
+def check_cache_size():
+    cache_path = f'{home_folder}/.cache/aurinstall/'
+    cache_size = int(subprocess.getoutput(f'du -s {cache_path}').split()[0])
+    cache_size_mb = cache_size // 1024
+
+    if cache_size_mb >= 1000:
+        print(f'{RED}WARNING{ENDC}: Cache size is greater than 1GB (current size of {cache_size_mb}MB)')
+        print('Consider running "aurinstall clean" to clean the cache, or deleting some files in the cache directory.')
+        print(f'Cache is located at: {cache_path}')
+
 def update():
     aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n')]
     
@@ -146,7 +177,7 @@ def update():
 
 help_ = """AURinstall - A simple AUR helper written in Python.
 
-Valid operations are install, search, update, and remove."""
+Valid operations are install, search, update, clean, and remove."""
 
 def main():
     # I don't like argparse
@@ -157,14 +188,18 @@ def main():
         print(help_)
 
     if argc == 2:
-        if argv[1] not in ['install', 'search', 'remove', 'update']:
+        check_cache_size()
+        if argv[1] not in ['install', 'search', 'remove', 'update', 'clean']:
             print(f'Invalid operation: {argv[1]}')
         elif argv[1] == 'update':
             update()
+        elif argv[1] == 'clean':
+            clean()
         else:
             print(f'Please provide an argument for operation: {argv[1]}')
 
     elif argc == 3:
+        check_cache_size()
         if argv[1] == 'install':
             package = Package(name=argv[2])
             package.install()
@@ -181,4 +216,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('\nInterrupt signal received.')
