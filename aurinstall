@@ -205,11 +205,7 @@ def main():
             package.install()
 
         elif argv[1] == 'search':
-            aur_only = False
-            if '--aur_only' in argv:
-                aur_only = True
-
-            search_package(argv[2], aur_only)
+            search_package(argv[2])
 
         elif argv[1] == 'remove':
             remove_package(argv[2])
