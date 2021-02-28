@@ -92,7 +92,7 @@ class Package:
 
     def install(self):
         if not self.valid_package:
-            print(f'error: target not found: {self.name}')
+            os.system(f'sudo pacman --color auto -S {self.name}')
             return
 
         if self.metadata['results'][0]['OutOfDate'] not in (None, 'null'):
@@ -116,12 +116,13 @@ class Package:
         os.system(f'cd {package_path} && pwd && makepkg -si {package_path}/')
 
 
-def search_package(package_name):
-    if not being_piped:
-        no_normal_packages_found = os.system(f'pacman --color always -Ss {package_name}')
-    else:
-        no_normal_packages_found = os.system(f'pacman -Ss {package_name}')
-
+def search_package(package_names):
+    if type(package_names) != list:
+        package_names = [package_names]
+        
+    package_name = ''.join([i + ' ' for i in package_names])
+    no_normal_packages_found = os.system(f'pacman --color auto -Ss {package_name}')
+    
     package_query_str = f'https://aur.archlinux.org/rpc/?v=5&type=search&arg={package_name}'
     json_response = requests.get(package_query_str).json()
 
@@ -133,6 +134,7 @@ def search_package(package_name):
         current_package_json_chunk = json_response['results'][i]
         current_package = Package(current_package_json_chunk['Name'], metadata=current_package_json_chunk)
         current_package.print_info()
+
 
 
 def remove_package(package_name):
@@ -180,7 +182,7 @@ def check_cache_size():
 
 def update_script():
     os.system(f'rm -rf {cache_path}/new_script_ver/')
-    clone_failed = os.system(f'git clone https://github.com/hasanqz/aurinstall {cache_path}/new_script_ver/')
+    clone_failed = os.system(f'git clone https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/')
     if clone_failed:
         print('error: error cloning new aurinstall version')
         return
@@ -229,7 +231,8 @@ def main():
         print(help_)
 
     if argc == 2:
-        check_cache_size()
+        if argv[1] != 'clean':
+            check_cache_size()
         if argv[1] not in ['install', 'search', 'remove', 'update', 'clean']:
             print(f'Invalid operation: {argv[1]}')
         elif argv[1] == 'update':
@@ -239,14 +242,15 @@ def main():
         else:
             print(f'Please provide an argument for operation: {argv[1]}')
 
-    elif argc == 3:
+    elif argc >= 3:
         check_cache_size()
         if argv[1] == 'install':
-            package = Package(name=argv[2])
-            package.install()
+            for pkgname in argv[2:]:
+                package = Package(name=pkgname)
+                package.install()
 
         elif argv[1] == 'search':
-            search_package(argv[2])
+            search_package(argv[2:])
 
         elif argv[1] == 'remove':
             remove_package(argv[2])
