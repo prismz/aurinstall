@@ -15,17 +15,13 @@ username = home_folder.split('/')[-1].strip('/')
 current_file_path = __file__
 current_file_directory = ''.join([i + '/' for i in current_file_path.split('/')[0:-1]])
 
-being_piped = False
+normal_term = True
 try:
     os.get_terminal_size()
 except OSError:
-    being_piped = True
+    normal_term = False
 
-if not os.path.exists(f'{home_folder}/.cache/aurinstall/'):
-    os.mkdir(f'{home_folder}/.cache/aurinstall')
-
-cache_path = f'{home_folder}/.cache/aurinstall/'
-
+cache_path = f'{home_folder}/.cache/aurinstall'
 
 def pretty_print(text, indent=4, first_indent=4):
     try:
@@ -51,113 +47,71 @@ def pretty_print(text, indent=4, first_indent=4):
     except:
         pass
 
+def print_package_info(metadata):
+    version = metadata['Version']
+    name = metadata['Name']
+    if normal_term:
+        print(f'{BOLD}{RED}aur/{ENDC}{ENDC}' + f'{BOLD}{name}{ENDC} ' + f'{BOLD}{GREEN}{version}{ENDC}{ENDC}')
+        pretty_print(metadata['Description'])
+    elif not normal_term:
+        print(f'aur/{name} {version}')
+        print('    ',end='')
+        print(self.metadata['Description'])
+    else:
+        print(f'error: target not found: {name}')
 
-class Package:
-    def __init__(self, name, metadata={}):
-        self.valid_package = True
-        self.name = name
+def install_packages(packages):
+    non_aur_package_str = ''
+    api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
 
-        if metadata == {}:
-            self.metadata = self.get_metadata()
-        else:
-            self.metadata = metadata
+    for package in packages:
+        api_str += f'&arg[]={package}'
 
-        self.clone_url = self.get_clone_url()
+    metadata = requests.get(api_str).json()
+    result_count = metadata['resultcount']
 
+    aur_packages = {}
+    for package in metadata['results']:
+        aur_packages[package['Name']] = package
 
-    def get_clone_url(self):
-        return f'https://aur.archlinux.org/{self.name}.git'
+    if result_count != len(packages):
+        for package in packages:
+            if package not in aur_packages:
+                non_aur_package_str += package + ' '
 
+        retc = os.system(f'sudo pacman --color auto -S {non_aur_package_str}')
+        if retc != 0:
+            print('error installing non-AUR packages.')
 
-    def get_metadata(self):
-        package_query_str = f'https://aur.archlinux.org/rpc/?v=5&type=info&arg={self.name}'
-        metadata = requests.get(package_query_str).json()
-        if metadata['resultcount'] != 1:
-            self.valid_package = False
-        return metadata
+    if aur_packages == {}:
+        return
 
+    for pkgname in aur_packages:
+        pkgdata = aur_packages[pkgname]
+        print(pkgdata)
+        name = pkgdata['Name']
 
-    def print_info(self):
-        version = self.metadata['Version']
-        if self.valid_package and not being_piped:
-            print(f'{BOLD}{RED}aur/{ENDC}{ENDC}' + f'{BOLD}{self.name}{ENDC} ' + f'{BOLD}{GREEN}{version}{ENDC}{ENDC}')
-            pretty_print(self.metadata['Description'])
-        elif self.valid_package:
-            print(f'aur/{self.name} {version}')
-            print('    ',end='')
-            print(self.metadata['Description'])
-        else:
-            print(f'error: target not found: {self.name}')
-
-
-    def install(self):
-        if not self.valid_package:
-            os.system(f'sudo pacman --color auto -S {self.name}')
-            return
-
-        if self.metadata['results'][0]['OutOfDate'] not in (None, 'null'):
-            x = input(f'warning: package {self.name} is out of date. Continue? [y/N] ')
+        if pkgdata['OutOfDate'] not in [None, 'null']:
+            prompt = input(f'warning: package {name} is out of date. Continue? [y/N] ')
             if x.lower() != 'y':
-                return
+                continue # skip current package
 
-        package_path = f'{home_folder}/.cache/aurinstall/{self.name}/'
-        clone_success = os.system(f'git clone {self.get_clone_url()} {package_path}')
+        package_path = f'{cache_path}/{name}/'
+        clone_success = os.system(f'git clone https://aur.archlinux.org/{name}.git {package_path}')
 
-        if (clone_success and os.path.exists(package_path)): # if the package has already been cloned
-
-            cleanbuild = input(f'Files already exist for package {self.name}. Rebuild package? [y/N] ')
+        if (clone_success and os.path.exists(package_path)):
+            cleanbuild = input(f'files already exist for package {name}. Rebuild package? [y/N] ')
             if cleanbuild.lower().strip() == 'y':
                 os.system(f'rm -rf {package_path}')
-                result_ = os.system(f'git clone {self.get_clone_url()} {package_path}')
+                result_ = os.system(f'git clone https://aur.archlinux.org/{name}.git {package_path}')
                 if result_:
-                    print(f'error: error installing package {self.name}')
-                    return
+                    print(f'error: error installing package {name}')
+                    continue
 
-        os.system(f'cd {package_path} && pwd && makepkg -si {package_path}/')
+        retc = os.system(f'cd {package_path} && pwd && makepkg -si {package_path}/')
 
-
-def search_package(package_names):
-    if type(package_names) != list:
-        package_names = [package_names]
-        
-    package_name = ''.join([i + ' ' for i in package_names])
-    no_normal_packages_found = os.system(f'pacman --color auto -Ss {package_name}')
-    
-    package_query_str = f'https://aur.archlinux.org/rpc/?v=5&type=search&arg={package_name}'
-    json_response = requests.get(package_query_str).json()
-
-    if json_response['resultcount'] == 0 and no_normal_packages_found:
-        print('error: no packages found.')
-        return
-
-    for i in range(json_response['resultcount']):
-        current_package_json_chunk = json_response['results'][i]
-        current_package = Package(current_package_json_chunk['Name'], metadata=current_package_json_chunk)
-        current_package.print_info()
-
-
-
-def remove_package(package_name):
-    os.system(f'sudo pacman -R {package_name}')
-
-
-def clean():
-    packages_in_cache = os.listdir(cache_path)
-    if len(packages_in_cache) == 0:
-        print('no packages in cache.')
-        return
-
-    print(f'{RED}WARNING{ENDC}: you are about to delete the cache of the following packages: ')
-
-    for pkg in packages_in_cache:
-        print(pkg)
-
-    x = input('\nAre you sure you want to continue? [Y/n] ')
-    if x.lower() == '' or x.lower() == 'y':
-        for pkg in packages_in_cache:
-            os.system(f'rm -rf {cache_path}{pkg}/')
-            print(f'deleted package cache at path: {cache_path}{pkg}/')
-
+        if retc != 0:
+            print('warning: non-zero return code from package build.')
 
 def check_cache_size():
     try:
@@ -180,6 +134,44 @@ def check_cache_size():
     except:
         print('error: error checking cache size.')
 
+
+def clean():
+    packages_in_cache = os.listdir(cache_path)
+    if len(packages_in_cache) == 0:
+        print('no packages in cache.')
+        return
+
+
+    package_dict = {}
+
+    for i, pkg in enumerate(packages_in_cache):
+        print(f'{i+1}. {pkg}')
+        package_dict[i+1] = pkg
+
+    x = input(f'select package caches to clean (leave blank for all, -1 for none): ')
+    if x.strip() == '':
+        for pkg in packages_in_cache:
+            r = os.system(f'rm -rf {cache_path}/{pkg}/')
+            if r != 0:
+                print(f'error cleaning cache of package {pkg}')
+            else:
+                print(f'cleaned cache: {cache_path}/{pkg}')
+    elif x.strip() == '-1':
+        return
+
+    else:
+        for ind in x.strip().split(' '):
+            try:
+                pkg = package_dict[int(ind)]
+                r = os.system(f'rm -rf {cache_path}/{pkg}/')
+                if r != 0:
+                    print(f'error cleaning cache of package {pkg}')
+
+                else:
+                    print(f'cleaned cache {cache_path}/{pkg}')
+            except:
+                print(f'invalid package index: {ind}')
+
 def update_script():
     os.system(f'rm -rf {cache_path}/aurinstall/')
     clone_failed = os.system(f'git clone https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/')
@@ -193,46 +185,118 @@ def update_script():
 
 def update():
     print('updating standard packages...')
-    os.system('sudo pacman --color always -Syu')
-
-    print('checking AUR packages for updates...')
+    os.system('sudo pacman --color auto -Syu')    
+    print('\nchecking AUR packages for updates...')
     aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n')]
 
-    for pkg in aur_pkgs:
-        p = Package(pkg.split(' ', 1)[0])
-        pkg_ver = pkg.split(' ', 1)[-1]
+    api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
+    pkgs = {}
 
-        try:
-            new_pkg_ver = p.metadata['results'][0]['Version']
+    to_update = []
 
-            if new_pkg_ver != pkg_ver:
-                os.system(f'rm -rf {home_folder}/.cache/aurinstall/{p.name}')
-                p.install()
+    pkg_list = subprocess.getoutput('pacman -Qm').split('\n')
+    for pkg in pkg_list:
+        pkg_name, pkg_ver = pkg.split(' ', 1)
+        api_str += f'&arg[]={pkg_name}'
+        pkgs[pkg_name] = pkg_ver
 
-        except KeyError:
-            print(f'package {p.name} is not an AUR package or is invalid.')
-
+    metadata = requests.get(api_str).json()
+    if metadata['resultcount'] <= 0:
+        if aur_pkgs == []:
+            return
+        else:
+            for pkg in aur_pkgs:
+                print(f'package {pkg} is invalid or not an AUR package.')
+            return
     
+    for result in metadata['results']:
+        name = result['Name']
+        ver = result['Version']
+        ood = result['OutOfDate']
 
-    update_script_ = input('Would you like to update aurinstall from github? [Y/n] ').lower().strip() in ['y', '']
-    if update_script_:
-        update_script()
+        if pkgs[name] != ver:
+            os.system(f'rm -rf {cache_path}/{name}')
+            to_update.append(name)
 
-help_ = """AURinstall - A simple AUR helper written in Python.
+    if to_update != []:
+        install_packages(to_update)
+    else:
+        print('no AUR packages to update!')
 
-Valid operations are install, search, update, clean, and remove."""
+def remove_packages(packages):
+    pstr = ''.join([i + ' ' for i in packages])
+    os.system(f'sudo pacman -R {pstr}')
 
-def main():
-    # I don't like argparse
-    argc = len(sys.argv)
+def all_list_in_str(str_, lst):
+    y = True
+    for i in lst:
+        if i not in str_:
+            y = False
+
+    return y
+        
+
+def search_package(terms):
+    pstr = ''.join([i + ' ' for i in terms])
+    rc = os.system(f'pacman --color auto -Ss {pstr}')
+
+    api_str = f'https://aur.archlinux.org/rpc/?v=5&type=search&arg={terms[0]}'
+
+    json = requests.get(api_str).json()
+
+    if json['resultcount'] == 0 and rc:
+        print('error: no packages found.')
+        return
+    
+    rw_package_data = json['results']
+    package_data = {}
+    for i in rw_package_data:
+        package_data[i['Name']] = i
+
+    packages_to_show = []
+
+    for rsp in package_data:
+        dt = package_data[rsp]
+        name = dt['Name']
+        desc = dt['Description']
+
+        if all_list_in_str(f'{name} {desc}', terms[1:]):
+            packages_to_show.append(dt)
+
+    for i in packages_to_show:
+        print_package_info(i)
+    
+    # for json_c in json['results']
+
+
+help_ = """                  _           _        _ _ 
+  __ _ _   _ _ __(_)_ __  ___| |_ __ _| | |
+ / _` | | | | '__| | '_ \/ __| __/ _` | | |
+| (_| | |_| | |  | | | | \__ \ || (_| | | |
+ \__,_|\__,_|_|  |_|_| |_|___/\__\__,_|_|_|
+
+Simple AUR helper written in Python.
+
+Valid operations are install, search, update, clean, and remove.
+
+ - install multiple packages with one command
+ - specify more than one search term to refine your search 
+
+- written by Hasan Zahra
+https://github.com/HasanQZ/aurinstall"""
+
+if __name__ == '__main__':
     argv = sys.argv
+    argc = len(sys.argv)
 
     if argc == 1:
         print(help_)
+        exit()
+    
+    if argv[1] != 'clean':
+        check_cache_size()
 
     if argc == 2:
-        if argv[1] != 'clean':
-            check_cache_size()
         if argv[1] not in ['install', 'search', 'remove', 'update', 'clean']:
             print(f'Invalid operation: {argv[1]}')
         elif argv[1] == 'update':
@@ -243,21 +307,15 @@ def main():
             print(f'Please provide an argument for operation: {argv[1]}')
 
     elif argc >= 3:
-        check_cache_size()
+        if argv[1] == 'clean':
+            clean()
         if argv[1] == 'install':
-            for pkgname in argv[2:]:
-                package = Package(name=pkgname)
-                package.install()
+            install_packages(argv[2:])                
 
         elif argv[1] == 'search':
             search_package(argv[2:])
 
         elif argv[1] == 'remove':
-            remove_package(argv[2])
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print('\nInterrupt signal received.')
+            remove_packages(argv[2:])
+    else:
+        print(f'invalid arguments: {argv}')
