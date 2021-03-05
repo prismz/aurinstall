@@ -56,7 +56,7 @@ def print_package_info(metadata):
     elif not normal_term:
         print(f'aur/{name} {version}')
         print('    ',end='')
-        print(self.metadata['Description'])
+        print(metadata['Description'])
     else:
         print(f'error: target not found: {name}')
 
