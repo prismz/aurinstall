@@ -56,7 +56,7 @@ def print_package_info(metadata):
     elif not normal_term:
         print(f'aur/{name} {version}')
         print('    ',end='')
-        print(self.metadata['Description'])
+        print(metadata['Description'])
     else:
         print(f'error: target not found: {name}')
 
@@ -173,13 +173,14 @@ def clean():
                 print(f'invalid package index: {ind}')
 
 def update_script():
+
     os.system(f'rm -rf {cache_path}/aurinstall/')
     clone_failed = os.system(f'git clone https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/')
     if clone_failed:
         print('error: error cloning new aurinstall version')
         return
 
-    os.system(f'sudo cp {cache_path}/aurinstall/aurinstall {current_file_path} && sudo chmod +x {current_file_path} && sudo chmod +x {current_file_path}')
+    os.system(f'sudo cp {cache_path}/aurinstall/aurinstall /usr/bin/aurinstall && sudo chmod +x /usr/bin/aurinstall')
     print('updated script.')
 
 
@@ -266,7 +267,6 @@ def search_package(terms):
     for i in packages_to_show:
         print_package_info(i)
     
-    # for json_c in json['results']
 
 
 help_ = """                  _           _        _ _ 
@@ -301,6 +301,7 @@ if __name__ == '__main__':
             print(f'Invalid operation: {argv[1]}')
         elif argv[1] == 'update':
             update()
+            update_script()
         elif argv[1] == 'clean':
             clean()
         else:
