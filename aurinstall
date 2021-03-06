@@ -85,10 +85,15 @@ def install_packages(packages):
 
     if aur_packages == {}:
         return
-
+    print('')
     for pkgname in aur_packages:
         pkgdata = aur_packages[pkgname]
-        print(pkgdata)
+        for key in pkgdata:
+            data = pkgdata[key]
+            print(f'{key}: {data}')
+
+        print('')
+
         name = pkgdata['Name']
 
         if pkgdata['OutOfDate'] not in [None, 'null']:
@@ -127,7 +132,10 @@ def check_cache_size():
         cache_size_mb = round(cache_size // 1024 // 1024)
 
         if cache_size_mb >= 1000:
-            print(f'{RED}WARNING{ENDC}: Cache size is greater than 1GB (current size of {cache_size_mb}MB)')
+            if normal_term: 
+                print(f'{RED}WARNING{ENDC}: Cache size is greater than 1GB (current size of {cache_size_mb}MB)')
+            else:
+                print(f'WARNING: Cache size is greater than 1GB (current size of {cache_size_mb}MB)')
             print('Consider running "aurinstall clean" to clean the cache, or deleting some files in the cache directory.')
             print(f'Cache is located at: {cache_path}')
 
@@ -173,15 +181,15 @@ def clean():
                 print(f'invalid package index: {ind}')
 
 def update_script():
-
+    print('cloning aurinstall from github to ensure latest version...')
     os.system(f'rm -rf {cache_path}/aurinstall/')
-    clone_failed = os.system(f'git clone https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/')
+    clone_failed = os.system(f'git clone --quiet https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/ >> /dev/null')
     if clone_failed:
         print('error: error cloning new aurinstall version')
         return
 
     os.system(f'sudo cp {cache_path}/aurinstall/aurinstall /usr/bin/aurinstall && sudo chmod +x /usr/bin/aurinstall')
-    print('updated script.')
+    print('updated to latest aurinstall version.')
 
 
 def update():
