@@ -118,6 +118,8 @@ def install_packages(packages):
         if retc != 0:
             print('warning: non-zero return code from package build.')
 
+<<<<<<< HEAD
+=======
 def check_cache_size():
     try:
         cache_size = 0
@@ -141,6 +143,7 @@ def check_cache_size():
 
     except:
         print('error: error checking cache size.')
+>>>>>>> 708d33dcba5cb0cc7c7d55e4e77a693ca5413e54
 
 
 def clean():
