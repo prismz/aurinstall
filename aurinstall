@@ -118,29 +118,6 @@ def install_packages(packages):
         if retc != 0:
             print('warning: non-zero return code from package build.')
 
-def check_cache_size():
-    try:
-        cache_size = 0
-
-        for dirpath, dirnames, filenames in os.walk(cache_path):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                # skip if it is symbolic link
-                if not os.path.islink(fp):
-                    cache_size += os.path.getsize(fp)
-
-        cache_size_mb = round(cache_size // 1024 // 1024)
-
-        if cache_size_mb >= 1000:
-            if normal_term: 
-                print(f'{RED}WARNING{ENDC}: Cache size is greater than 1GB (current size of {cache_size_mb}MB)')
-            else:
-                print(f'WARNING: Cache size is greater than 1GB (current size of {cache_size_mb}MB)')
-            print('Consider running "aurinstall clean" to clean the cache, or deleting some files in the cache directory.')
-            print(f'Cache is located at: {cache_path}')
-
-    except:
-        print('error: error checking cache size.')
 
 
 def clean():
@@ -301,9 +278,6 @@ if __name__ == '__main__':
         print(help_)
         exit()
     
-    if argv[1] != 'clean':
-        check_cache_size()
-
     if argc == 2:
         if argv[1] not in ['install', 'search', 'remove', 'update', 'clean']:
             print(f'Invalid operation: {argv[1]}')
