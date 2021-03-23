@@ -28,23 +28,22 @@ except OSError:
 cache_path = f'{home_folder}/.cache/aurinstall'
 config_path = f'{home_folder}/.config/aurinstall/aurinstall'
 
-def init():
-    if not os.path.exists(cache_path):
-        os.system(f'mkdir {cache_path}')
-    if not os.path.exists(f'{home_folder}/.config/aurinstall'):
-        os.system(f'mkdir {home_folder}/.config/aurinstall')
-    os.system(f'touch {config_path}')
-    
-    config_file = open(config_path, 'r+')
-    config_contents = config_file.read()
-    for line in config_contents.split('\n'):
-        if line.strip().lower().startswith('blacklist '):
-            for pkg in line.strip().split(' ')[1:]:
-                opt_blacklist.append(pkg)
-    
-        if line.strip().lower() == 'autoupdate':
-            global opt_autoupdate
-            opt_autoupdate = True
+if not os.path.exists(cache_path):
+    os.system(f'mkdir {cache_path}')
+if not os.path.exists(f'{home_folder}/.config/aurinstall'):
+    os.system(f'mkdir {home_folder}/.config/aurinstall')
+os.system(f'touch {config_path}')
+
+config_file = open(config_path, 'r+')
+config_contents = config_file.read()
+for line in config_contents.split('\n'):
+    if line.strip().lower().startswith('blacklist '):
+        for pkg in line.strip().split(' ')[1:]:
+            opt_blacklist.append(pkg)
+
+    if line.strip().lower() == 'autoupdate':
+        global opt_autoupdate
+        opt_autoupdate = True
 
 def pretty_print(text, indent=4, first_indent=4):
     try:
@@ -312,10 +311,8 @@ Config:
 https://github.com/HasanQZ/aurinstall"""
 
 if __name__ == '__main__':
-    init()
     _argv = sys.argv
     argv = []
-    optargv = []
     for arg in _argv:
         if arg == ('--noconfirm'):
             opt_noconfirm = True
