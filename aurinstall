@@ -10,6 +10,8 @@ GREEN = '\033[92m'
 RED = '\033[91m'
 ENDC = '\033[0m'
 
+opt_noconfirm = False
+
 home_folder = os.path.expanduser('~')
 username = home_folder.split('/')[-1].strip('/')
 current_file_path = __file__
@@ -85,12 +87,12 @@ def install_packages(packages):
 
     if aur_packages == {}:
         return
-    print('')
+    # print('')
     for pkgname in aur_packages:
         pkgdata = aur_packages[pkgname]
 
         name = pkgdata['Name']
-
+        
         if pkgdata['OutOfDate'] not in [None, 'null']:
             prompt = input(f'warning: package {name} is out of date. Continue? [y/N] ')
             if x.lower() != 'y':
@@ -107,8 +109,12 @@ def install_packages(packages):
                 if result_:
                     print(f'error: error installing package {name}')
                     continue
-
-        retc = os.system(f'cd {package_path} && pwd && makepkg -si {package_path}/')
+        
+        formatted_cmd = f'cd {package_path} && pwd && makepkg -si '
+        if opt_noconfirm:
+            formatted_cmd += ' --noconfirm'
+        formatted_cmd += f' {package_path}/'
+        retc = os.system(formatted_cmd)
 
         if retc != 0:
             print('warning: non-zero return code from package build.')
@@ -118,7 +124,6 @@ def clean():
     if len(packages_in_cache) == 0:
         print('no packages in cache.')
         return
-
 
     package_dict = {}
 
@@ -164,7 +169,10 @@ def update_script():
 
 def update():
     print('updating standard packages...')
-    os.system('sudo pacman --color auto -Syu')    
+    formatted_cmd = 'sudo pacman --color auto -Syu'
+    if opt_noconfirm:
+        formatted_cmd += ' --noconfirm'
+    os.system(formatted_cmd)    
     print('\nchecking AUR packages for updates...')
     aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n')]
 
@@ -213,7 +221,6 @@ def all_list_in_str(str_, lst):
             y = False
 
     return y
-        
 
 def search_package(terms):
     pstr = ''.join([i + ' ' for i in terms])
@@ -260,12 +267,23 @@ Valid operations are install, search, update, clean, and remove.
  - install multiple packages with one command
  - specify more than one search term to refine your search 
 
+Options:
+ --noconfirm - automatically confirm all transactions
+
 - written by Hasan Zahra
 https://github.com/HasanQZ/aurinstall"""
 
 if __name__ == '__main__':
-    argv = sys.argv
-    argc = len(sys.argv)
+    _argv = sys.argv
+    argv = []
+    optargv = []
+    for arg in _argv:
+        if arg == ('--noconfirm'):
+            opt_noconfirm = True
+        else:
+            argv.append(arg)
+
+    argc = len(argv)
 
     if argc == 1:
         print(help_)
