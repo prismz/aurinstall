@@ -11,6 +11,8 @@ RED = '\033[91m'
 ENDC = '\033[0m'
 
 opt_noconfirm = False
+opt_autoupdate = False
+opt_blacklist = []
 
 home_folder = os.path.expanduser('~')
 username = home_folder.split('/')[-1].strip('/')
@@ -24,6 +26,24 @@ except OSError:
     normal_term = False
 
 cache_path = f'{home_folder}/.cache/aurinstall'
+config_path = f'{home_folder}/.config/aurinstall/aurinstall'
+
+def init():
+    if not os.path.exists(cache_path):
+        os.system(f'mkdir {cache_path}')
+    if not os.path.exists(f'{home_folder}/.config/aurinstall'):
+        os.system(f'mkdir {home_folder}/.config/aurinstall')
+    os.system(f'touch {config_path}')
+    
+    config_file = open(config_path, 'r+')
+    config_contents = config_file.read()
+    for line in config_contents.split('\n'):
+        if line.strip().lower().startswith('blacklist '):
+            for pkg in line.strip().split(' ')[1:]:
+                opt_blacklist.append(pkg)
+    
+        elif line.strip().lower() == 'autoupdate':
+            opt_autoupdate = True
 
 def pretty_print(text, indent=4, first_indent=4):
     try:
@@ -166,7 +186,6 @@ def update_script():
     os.system(f'sudo cp {cache_path}/aurinstall/aurinstall /usr/bin/aurinstall && sudo chmod +x /usr/bin/aurinstall')
     print('updated to latest aurinstall version.')
 
-
 def update():
     print('updating standard packages...')
     formatted_cmd = 'sudo pacman --color auto -Syu'
@@ -174,15 +193,20 @@ def update():
         formatted_cmd += ' --noconfirm'
     os.system(formatted_cmd)    
     print('\nchecking AUR packages for updates...')
-    aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n')]
+    aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n') if pkg.split(' ', 1)[0] not in opt_blacklist]
 
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
     pkgs = {}
 
     to_update = []
 
-    pkg_list = subprocess.getoutput('pacman -Qm').split('\n')
-    for pkg in pkg_list:
+    if opt_blacklist != []:
+        print(f'Packages have been blacklisted:')
+        for pkg in opt_blacklist:
+            print(f' => {pkg}')
+
+    # pkg_list = subprocess.getoutput('pacman -Qm').split('\n')
+    for pkg in aur_pkgs:
         pkg_name, pkg_ver = pkg.split(' ', 1)
         api_str += f'&arg[]={pkg_name}'
         pkgs[pkg_name] = pkg_ver
@@ -200,6 +224,11 @@ def update():
         name = result['Name']
         ver = result['Version']
         ood = result['OutOfDate']
+
+        if ood not in (None, 'null'):
+            opt = input(f'package {name} has been flagged out of date. continue? [y/N] ')
+            if opt.lower().strip() != 'y':
+                continue
 
         if pkgs[name] != ver:
             os.system(f'rm -rf {cache_path}/{name}')
@@ -270,10 +299,19 @@ Valid operations are install, search, update, clean, and remove.
 Options:
  --noconfirm - automatically confirm all transactions
 
+Config:
+ ~/.config/aurinstall/aurinstall
+
+ blacklist: pkg1 pkg2 pkg3
+    - blacklists listed packages
+ autoupdate
+    - enables updating aurinstall from GitHub when running "aurinstall update".
+
 - written by Hasan Zahra
 https://github.com/HasanQZ/aurinstall"""
 
 if __name__ == '__main__':
+    init()
     _argv = sys.argv
     argv = []
     optargv = []
@@ -294,7 +332,8 @@ if __name__ == '__main__':
             print(f'Invalid operation: {argv[1]}')
         elif argv[1] == 'update':
             update()
-            update_script()
+            if opt_autoupdate:
+                update_script()
         elif argv[1] == 'clean':
             clean()
         else:
