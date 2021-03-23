@@ -42,7 +42,8 @@ def init():
             for pkg in line.strip().split(' ')[1:]:
                 opt_blacklist.append(pkg)
     
-        elif line.strip().lower() == 'autoupdate':
+        if line.strip().lower() == 'autoupdate':
+            global opt_autoupdate
             opt_autoupdate = True
 
 def pretty_print(text, indent=4, first_indent=4):
@@ -333,6 +334,7 @@ if __name__ == '__main__':
         elif argv[1] == 'update':
             update()
             if opt_autoupdate:
+                print('warning: updating aurinstall from GitHub enabled.')
                 update_script()
         elif argv[1] == 'clean':
             clean()
