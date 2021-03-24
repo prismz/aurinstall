@@ -4,15 +4,15 @@ import sys
 import os
 
 from util import *
-
+from global_vars import *
 
 def print_package_info(metadata):
     version = metadata['Version']
     name = metadata['Name']
-    if normal_term:
+    if normal_term and opts['coloroutput'] in (SMART, True):
         print(f'{BOLD}{RED}aur/{ENDC}{ENDC}' + f'{BOLD}{name}{ENDC} ' + f'{BOLD}{GREEN}{version}{ENDC}{ENDC}')
         pretty_print(metadata['Description'])
-    elif not normal_term:
+    elif not (normal_term and opts['coloroutput'] not in (SMART, True)):
         print(f'aur/{name} {version}')
         print('    ',end='')
         print(metadata['Description'])
@@ -22,6 +22,8 @@ def print_package_info(metadata):
 def install_packages(packages):
     non_aur_package_str = ''
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
+    pacopts = opts['pacman_args']
+    gitopts = opts['git_args']
 
     for package in packages:
         api_str += f'&arg[]={package}'
@@ -38,22 +40,22 @@ def install_packages(packages):
             if package not in aur_packages:
                 non_aur_package_str += package + ' '
 
-        retc = os.system(f'sudo pacman --color auto -S {non_aur_package_str}')
+        retc = os.system(f'sudo pacman {pacopts} -S {non_aur_package_str}')
         if retc != 0:
             print('error installing non-AUR packages.')
 
     if aur_packages == {}:
         return
-    # print('')
+
     for pkgname in aur_packages:
         pkgdata = aur_packages[pkgname]
 
         name = pkgdata['Name']
-        
+
         if pkgdata['OutOfDate'] not in [None, 'null']:
             prompt = input(f'warning: package {name} is out of date. Continue? [y/N] ')
-            if x.lower() != 'y':
-                continue # skip current package
+            if prompt.lower() != 'y':
+                continue  # skip current package
 
         package_path = f'{cache_path}/{name}/'
         clone_success = os.system(f'git clone https://aur.archlinux.org/{name}.git {package_path}')
@@ -67,11 +69,7 @@ def install_packages(packages):
                     print(f'error: error installing package {name}')
                     continue
         
-        formatted_cmd = f'cd {package_path} && pwd && makepkg -si '
-        if opt_noconfirm:
-            formatted_cmd += ' --noconfirm'
-        formatted_cmd += f' {package_path}/'
-        retc = os.system(formatted_cmd)
+        retc = os.system(f'cd {package_path} && pwd && makepkg {pacopts} -si {package_path}/')
 
         if retc != 0:
             print('warning: non-zero return code from package build.')
@@ -124,11 +122,12 @@ def update_script():
     print('updated to latest aurinstall version.')
 
 def update():
+    gitopts = opts['git_args']
+    pacopts = opts['pacman_args']
+
     print('updating standard packages...')
-    formatted_cmd = 'sudo pacman --color auto -Syu'
-    if opt_noconfirm:
-        formatted_cmd += ' --noconfirm'
-    os.system(formatted_cmd)    
+
+    os.system(f'sudo pacman {pacman_args} -Syu')
     print('\nchecking AUR packages for updates...')
     aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n') if pkg.split(' ', 1)[0] not in opt_blacklist]
 
@@ -156,7 +155,7 @@ def update():
             for pkg in aur_pkgs:
                 print(f'package {pkg} is invalid or not an AUR package.')
             return
-    
+
     for result in metadata['results']:
         name = result['Name']
         ver = result['Version']
@@ -178,19 +177,11 @@ def update():
 
 def remove_packages(packages):
     pstr = ''.join([i + ' ' for i in packages])
-    os.system(f'sudo pacman -R {pstr}')
-
-def all_list_in_str(str_, lst):
-    y = True
-    for i in lst:
-        if i not in str_:
-            y = False
-
-    return y
+    os.system(f'sudo pacman {pacargs} -R {pstr}')
 
 def search_package(terms):
     pstr = ''.join([i + ' ' for i in terms])
-    rc = os.system(f'pacman --color auto -Ss {pstr}')
+    rc = os.system(f'pacman {pacargs} -Ss {pstr}')
 
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=search&arg={terms[0]}'
 
@@ -199,7 +190,7 @@ def search_package(terms):
     if json['resultcount'] == 0 and rc:
         print('error: no packages found.')
         return
-    
+
     rw_package_data = json['results']
     package_data = {}
     for i in rw_package_data:
@@ -217,4 +208,3 @@ def search_package(terms):
 
     for i in packages_to_show:
         print_package_info(i)
-    

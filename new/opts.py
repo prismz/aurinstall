@@ -15,6 +15,8 @@ def parse_opt_args():
     for arg in optargv:
         if arg == '--noconfirm':
             opts['noconfirm'] = True
+            opts['pacman_args'] += ' --noconfirm'
+
         elif arg.startswith('--color='):
             colorflag = arg.split('=', 1)[0].lower().strip()
             if colorflag == 'auto' or colorflag == 'smart':
@@ -26,6 +28,7 @@ def parse_opt_args():
             elif colorflag == 'no':
                 opts['pacman_args'] += ' --color never'
                 opts['color'] = False
+
         elif arg.startswith('--verbosity='):
             verbosity_level = int(arg.split('=', 1)[0])
             if verbosity_level > MAX_LOGLEVEL:
@@ -33,8 +36,35 @@ def parse_opt_args():
 
             opts['verbosity'] = verbosity_level
 
+        elif arg == '--quiet':
+            opts['quiet'] = True
+            opts['git_args'] += ' --quiet'
+            opts['pacman_args'] += ' --quiet'
+
         else:
             print_err(f'argument {arg} not recognized.')
 
     opts['args_parsed'] = True
+
+def parse_config_file():
+    config_file = open(config_path, 'r+')
+    config = config_file.read()
+    config_file.close()
+
+    for _line in config.split('\n'):
+        line = _line.strip().lower()
+
+        if line == 'autoupdate':
+            opts['autoupdate'] = True
+        
+        elif line.startswith('blacklist'):
+            pkgs = line.split(' ')[1:]
+            opts['blacklist'] += pkgs
+
+        else:
+            print_err(f'unrecognized line in config: {_line}.')
+    
+    opts['config_parsed'] = True
+    
+
 
