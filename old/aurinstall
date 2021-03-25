@@ -1,18 +1,80 @@
-import subprocess
-import requests
-import sys
-import os
+#!/usr/bin/python
 
-from util import *
-from global_vars import *
+import requests
+import os
+import sys
+import subprocess
+
+BOLD = '\033[1m'
+GREEN = '\033[92m'
+RED = '\033[91m'
+ENDC = '\033[0m'
+
+opt_noconfirm = False
+opt_autoupdate = False
+opt_blacklist = []
+
+home_folder = os.path.expanduser('~')
+username = home_folder.split('/')[-1].strip('/')
+current_file_path = __file__
+current_file_directory = ''.join([i + '/' for i in current_file_path.split('/')[0:-1]])
+
+normal_term = True
+try:
+    os.get_terminal_size()
+except OSError:
+    normal_term = False
+
+cache_path = f'{home_folder}/.cache/aurinstall'
+config_path = f'{home_folder}/.config/aurinstall/aurinstall'
+
+if not os.path.exists(cache_path):
+    os.system(f'mkdir {cache_path}')
+if not os.path.exists(f'{home_folder}/.config/aurinstall'):
+    os.system(f'mkdir {home_folder}/.config/aurinstall')
+os.system(f'touch {config_path}')
+
+config_file = open(config_path, 'r+')
+config_contents = config_file.read()
+for line in config_contents.split('\n'):
+    if line.strip().lower().startswith('blacklist '):
+        for pkg in line.strip().split(' ')[1:]:
+            opt_blacklist.append(pkg)
+
+    if line.strip().lower() == 'autoupdate':
+        opt_autoupdate = True
+
+def pretty_print(text, indent=4, first_indent=4):
+    try:
+        termwidth = os.get_terminal_size().columns - indent
+        words = [i for i in text.split(' ')]
+
+        print(' ' * first_indent, end='')
+        i = 0
+        for index, word in enumerate(words):
+            print(word, end=' ')
+            i += len(word) + 1
+
+            try:
+                if i + (len(words[index + 1]) + 1) >= termwidth:
+                    print('')
+                    print(' ' * indent, end='')
+                    i = 0
+
+            except IndexError:
+                pass
+
+        print('')
+    except:
+        pass
 
 def print_package_info(metadata):
     version = metadata['Version']
     name = metadata['Name']
-    if normal_term and opts['coloroutput'] in (SMART, True):
+    if normal_term:
         print(f'{BOLD}{RED}aur/{ENDC}{ENDC}' + f'{BOLD}{name}{ENDC} ' + f'{BOLD}{GREEN}{version}{ENDC}{ENDC}')
         pretty_print(metadata['Description'])
-    elif not (normal_term and opts['coloroutput'] not in (SMART, True)):
+    elif not normal_term:
         print(f'aur/{name} {version}')
         print('    ',end='')
         print(metadata['Description'])
@@ -22,8 +84,6 @@ def print_package_info(metadata):
 def install_packages(packages):
     non_aur_package_str = ''
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
-    pacopts = opts['pacman_args']
-    gitopts = opts['git_args']
 
     for package in packages:
         api_str += f'&arg[]={package}'
@@ -40,22 +100,22 @@ def install_packages(packages):
             if package not in aur_packages:
                 non_aur_package_str += package + ' '
 
-        retc = os.system(f'sudo pacman {pacopts} -S {non_aur_package_str}')
+        retc = os.system(f'sudo pacman --color auto -S {non_aur_package_str}')
         if retc != 0:
             print('error installing non-AUR packages.')
 
     if aur_packages == {}:
         return
-
+    # print('')
     for pkgname in aur_packages:
         pkgdata = aur_packages[pkgname]
 
         name = pkgdata['Name']
-
+        
         if pkgdata['OutOfDate'] not in [None, 'null']:
             prompt = input(f'warning: package {name} is out of date. Continue? [y/N] ')
-            if prompt.lower() != 'y':
-                continue  # skip current package
+            if x.lower() != 'y':
+                continue # skip current package
 
         package_path = f'{cache_path}/{name}/'
         clone_success = os.system(f'git clone https://aur.archlinux.org/{name}.git {package_path}')
@@ -69,7 +129,11 @@ def install_packages(packages):
                     print(f'error: error installing package {name}')
                     continue
         
-        retc = os.system(f'cd {package_path} && pwd && makepkg {pacopts} -si {package_path}/')
+        formatted_cmd = f'cd {package_path} && pwd && makepkg -si '
+        if opt_noconfirm:
+            formatted_cmd += ' --noconfirm'
+        formatted_cmd += f' {package_path}/'
+        retc = os.system(formatted_cmd)
 
         if retc != 0:
             print('warning: non-zero return code from package build.')
@@ -122,14 +186,12 @@ def update_script():
     print('updated to latest aurinstall version.')
 
 def update():
-    gitopts = opts['git_args']
-    pacopts = opts['pacman_args']
-
     print('updating standard packages...')
-
-    os.system(f'sudo pacman {pacman_args} -Syu')
-    print('checking AUR packages for updates...')
-    print(' => beginning information retrieval...')
+    formatted_cmd = 'sudo pacman --color auto -Syu'
+    if opt_noconfirm:
+        formatted_cmd += ' --noconfirm'
+    os.system(formatted_cmd)    
+    print('\nchecking AUR packages for updates...')
     aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n') if pkg.split(' ', 1)[0] not in opt_blacklist]
 
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
@@ -148,20 +210,16 @@ def update():
         api_str += f'&arg[]={pkg_name}'
         pkgs[pkg_name] = pkg_ver
 
-    print(f' => querying AUR api with string:')
-    print(f'   => {api_str}')
-
     metadata = requests.get(api_str).json()
     if metadata['resultcount'] <= 0:
         if aur_pkgs == []:
             return
         else:
             for pkg in aur_pkgs:
-                print(f'    => package {pkg} is invalid or not an AUR package.')
+                print(f'package {pkg} is invalid or not an AUR package.')
             return
-
-    results = metadata['results']
-    for result in results:
+    
+    for result in metadata['results']:
         name = result['Name']
         ver = result['Version']
         ood = result['OutOfDate']
@@ -180,19 +238,21 @@ def update():
     else:
         print('no AUR packages to update!')
 
-    if opts['onupdate_command'] != '':
-        onup_cmd = opts['onupdate_command']
-        print(f'running update command: {onup_cmd}')
-        os.system(onup_cmd)
-    
-
 def remove_packages(packages):
     pstr = ''.join([i + ' ' for i in packages])
-    os.system(f'sudo pacman {pacargs} -R {pstr}')
+    os.system(f'sudo pacman -R {pstr}')
+
+def all_list_in_str(str_, lst):
+    y = True
+    for i in lst:
+        if i not in str_:
+            y = False
+
+    return y
 
 def search_package(terms):
     pstr = ''.join([i + ' ' for i in terms])
-    rc = os.system(f'pacman {pacargs} -Ss {pstr}')
+    rc = os.system(f'pacman --color auto -Ss {pstr}')
 
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=search&arg={terms[0]}'
 
@@ -201,7 +261,7 @@ def search_package(terms):
     if json['resultcount'] == 0 and rc:
         print('error: no packages found.')
         return
-
+    
     rw_package_data = json['results']
     package_data = {}
     for i in rw_package_data:
@@ -219,3 +279,74 @@ def search_package(terms):
 
     for i in packages_to_show:
         print_package_info(i)
+    
+
+
+help_ = """                  _           _        _ _ 
+  __ _ _   _ _ __(_)_ __  ___| |_ __ _| | |
+ / _` | | | | '__| | '_ \/ __| __/ _` | | |
+| (_| | |_| | |  | | | | \__ \ || (_| | | |
+ \__,_|\__,_|_|  |_|_| |_|___/\__\__,_|_|_|
+
+Simple AUR helper written in Python.
+
+Valid operations are install, search, update, clean, and remove.
+
+ - install multiple packages with one command
+ - specify more than one search term to refine your search 
+
+Options:
+ --noconfirm - automatically confirm all transactions
+
+Config:
+ ~/.config/aurinstall/aurinstall
+
+ blacklist: pkg1 pkg2 pkg3
+    - blacklists listed packages
+ autoupdate
+    - enables updating aurinstall from GitHub when running "aurinstall update".
+
+- written by Hasan Zahra
+https://github.com/HasanQZ/aurinstall"""
+
+if __name__ == '__main__':
+    _argv = sys.argv
+    argv = []
+    for arg in _argv:
+        if arg == ('--noconfirm'):
+            opt_noconfirm = True
+        else:
+            argv.append(arg)
+
+    argc = len(argv)
+
+    if argc == 1:
+        print(help_)
+        exit()
+    
+    if argc == 2:
+        if argv[1] not in ['install', 'search', 'remove', 'update', 'clean']:
+            print(f'Invalid operation: {argv[1]}')
+        elif argv[1] == 'update':
+            update()
+            if opt_autoupdate:
+                print('warning: updating aurinstall from GitHub enabled.')
+                update_script()
+        elif argv[1] == 'clean':
+            clean()
+        else:
+            print(f'Please provide an argument for operation: {argv[1]}')
+
+    elif argc >= 3:
+        if argv[1] == 'clean':
+            clean()
+        if argv[1] == 'install':
+            install_packages(argv[2:])                
+
+        elif argv[1] == 'search':
+            search_package(argv[2:])
+
+        elif argv[1] == 'remove':
+            remove_packages(argv[2:])
+    else:
+        print(f'invalid arguments: {argv}')

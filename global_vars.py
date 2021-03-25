@@ -8,10 +8,11 @@ BOLD = '\033[1m'
 GREEN = '\033[92m'
 RED = '\033[91m'
 ENDC = '\033[0m'
-
+ROOT_DIR = os.path.dirname(__file__)
 
 home_folder = os.path.expanduser('~')
 application_log = {}  # key:log contents, value=verbosity level required to show this log
+
 
 normal_term = True
 try:

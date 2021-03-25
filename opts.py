@@ -21,12 +21,12 @@ def parse_opt_args():
             colorflag = arg.split('=', 1)[0].lower().strip()
             if colorflag == 'auto' or colorflag == 'smart':
                 opts['color'] = SMART
-                opts['pacman_args'] += ' --color auto'
+                opts['pacman_args'] += ' --color auto '
             elif colorflag == 'yes':
                 opts['color'] = True
-                opts['pacman_args'] += ' --color always'
+                opts['pacman_args'] += ' --color always '
             elif colorflag == 'no':
-                opts['pacman_args'] += ' --color never'
+                opts['pacman_args'] += ' --color never '
                 opts['color'] = False
 
         elif arg.startswith('--verbosity='):
@@ -38,8 +38,8 @@ def parse_opt_args():
 
         elif arg == '--quiet':
             opts['quiet'] = True
-            opts['git_args'] += ' --quiet'
-            opts['pacman_args'] += ' --quiet'
+            opts['git_args'] += ' --quiet '
+            opts['pacman_args'] += ' --quiet '
 
         else:
             print_err(f'argument {arg} not recognized.')
@@ -53,28 +53,32 @@ def parse_config_file():
 
     for _line in config.split('\n'):
         line = _line.strip().lower()
+        try:
+            if line == 'autoupdate':
+                opts['autoupdate'] = True
+            
+            elif line.startswith('blacklist'):
+                pkgs = line.split(' ')[1:]
+                opts['blacklist'] += pkgs
 
-        if line == 'autoupdate':
-            opts['autoupdate'] = True
-        
-        elif line.startswith('blacklist'):
-            pkgs = line.split(' ')[1:]
-            opts['blacklist'] += pkgs
+            elif line.startswith('onupdate_command'):
+                command = line.split(' ', 1)[-1]
+                opts['onupdate_command'] = command
+            
+            elif line.startswith('pacman_args'):
+                args = line.split(' ', 1)[-1]
+                opts['pacman_args'] += f'  {args}  '
+            
+            elif line.startswith('git_args'):
+                args = line.split(' ', 1)[-1]
+                opts['git_args'] += f' {args} '
+            elif line == '':
+                continue
+            else:
+                print_err(f'unrecognized line in config: {_line}.')
 
-        elif line.startswith('onupdate_command'):
-            command = line.split(' ', 1)[-1]
-            opts['onupdate_command'] = command
-        
-        elif line.startswith('pacman_args'):
-            args = line.split(' ', 1)[-1]
-            opts['pacman_args'] += f'  {args}  '
-        
-        elif line.startswith('git_args'):
-            args = line.split(' ', 1)[-1]
-            opts['git_args'] += f'  {args}  '
-
-        else:
-            print_err(f'unrecognized line in config: {_line}.')
+        except:
+            print_err(f'error parsing line in config: {_line}.')
     
     opts['config_parsed'] = True
     
