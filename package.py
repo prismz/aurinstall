@@ -114,7 +114,7 @@ def update_script():
     gitargs = opts['git_args']
     print('cloning aurinstall from github to ensure latest version...')
     os.system(f'rm -rf {cache_path}/aurinstall/')
-    clone_failed = os.system(f'git clone --quiet {gitargs} https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/ >> /dev/null')
+    clone_failed = os.system(f'git clone {gitargs} https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/ >> /dev/null')
     if clone_failed:
         print('error: error cloning new aurinstall version')
         return
@@ -188,7 +188,7 @@ def update():
 
 def remove_packages(packages):
     pacargs = opts['pacman_args']
-    
+
     pstr = ''.join([i + ' ' for i in packages])
     os.system(f'sudo pacman {pacargs} -R {pstr}')
 
