@@ -11,7 +11,7 @@ ENDC = '\033[0m'
 
 
 home_folder = os.path.expanduser('~')
-application_log = {} # key:log contents, value=verbosity level required to show this log
+application_log = {}  # key:log contents, value=verbosity level required to show this log
 
 normal_term = True
 try:
@@ -42,5 +42,5 @@ opts = {
     'pacman_args': '',       # string of arguments to pass to ALL pacman calls
     'git_args': '',          # string of arguments to pass to ALL git calls
     'blacklist': [],         # packages to blacklist (only works with AUR packages)
+    'onupdate_command': ''    # command to run on update
 }
-

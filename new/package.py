@@ -128,7 +128,8 @@ def update():
     print('updating standard packages...')
 
     os.system(f'sudo pacman {pacman_args} -Syu')
-    print('\nchecking AUR packages for updates...')
+    print('checking AUR packages for updates...')
+    print(' => beginning information retrieval...')
     aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n') if pkg.split(' ', 1)[0] not in opt_blacklist]
 
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
@@ -147,16 +148,20 @@ def update():
         api_str += f'&arg[]={pkg_name}'
         pkgs[pkg_name] = pkg_ver
 
+    print(f' => querying AUR api with string:')
+    print(f'   => {api_str}')
+
     metadata = requests.get(api_str).json()
     if metadata['resultcount'] <= 0:
         if aur_pkgs == []:
             return
         else:
             for pkg in aur_pkgs:
-                print(f'package {pkg} is invalid or not an AUR package.')
+                print(f'    => package {pkg} is invalid or not an AUR package.')
             return
 
-    for result in metadata['results']:
+    results = metadata['results']
+    for result in results:
         name = result['Name']
         ver = result['Version']
         ood = result['OutOfDate']
@@ -174,6 +179,12 @@ def update():
         install_packages(to_update)
     else:
         print('no AUR packages to update!')
+
+    if opts['onupdate_command'] != '':
+        onup_cmd = opts['onupdate_command']
+        print(f'running update command: {onup_cmd}')
+        os.system(onup_cmd)
+    
 
 def remove_packages(packages):
     pstr = ''.join([i + ' ' for i in packages])

@@ -61,6 +61,18 @@ def parse_config_file():
             pkgs = line.split(' ')[1:]
             opts['blacklist'] += pkgs
 
+        elif line.startswith('onupdate_command'):
+            command = line.split(' ', 1)[-1]
+            opts['onupdate_command'] = command
+        
+        elif line.startswith('pacman_args'):
+            args = line.split(' ', 1)[-1]
+            opts['pacman_args'] += f'  {args}  '
+        
+        elif line.startswith('git_args'):
+            args = line.split(' ', 1)[-1]
+            opts['git_args'] += f'  {args}  '
+
         else:
             print_err(f'unrecognized line in config: {_line}.')
     
