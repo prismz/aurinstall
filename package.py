@@ -58,13 +58,13 @@ def install_packages(packages):
                 continue  # skip current package
 
         package_path = f'{cache_path}/{name}/'
-        clone_success = os.system(f'git clone https://aur.archlinux.org/{name}.git {package_path}')
+        clone_success = os.system(f'git clone {gitopts} https://aur.archlinux.org/{name}.git {package_path}')
 
         if (clone_success and os.path.exists(package_path)):
             cleanbuild = input(f'files already exist for package {name}. Rebuild package? [y/N] ')
             if cleanbuild.lower().strip() == 'y':
                 os.system(f'rm -rf {package_path}')
-                result_ = os.system(f'git clone https://aur.archlinux.org/{name}.git {package_path}')
+                result_ = os.system(f'git clone {gitopts} https://aur.archlinux.org/{name}.git {package_path}')
                 if result_:
                     print(f'error: error installing package {name}')
                     continue
@@ -111,9 +111,10 @@ def clean():
                 print(f'invalid package index: {ind}')
 
 def update_script():
+    gitargs = opts['git_args']
     print('cloning aurinstall from github to ensure latest version...')
     os.system(f'rm -rf {cache_path}/aurinstall/')
-    clone_failed = os.system(f'git clone --quiet https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/ >> /dev/null')
+    clone_failed = os.system(f'git clone --quiet {gitargs} https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/ >> /dev/null')
     if clone_failed:
         print('error: error cloning new aurinstall version')
         return
@@ -186,10 +187,12 @@ def update():
     
 
 def remove_packages(packages):
+    pacargs = opts['pacman_args']
     pstr = ''.join([i + ' ' for i in packages])
     os.system(f'sudo pacman {pacargs} -R {pstr}')
 
 def search_package(terms):
+    pacargs = opts['pacman_args']
     pstr = ''.join([i + ' ' for i in terms])
     rc = os.system(f'pacman {pacargs} -Ss {pstr}')
 
