@@ -182,7 +182,7 @@ def update_script():
         print('error: error cloning new aurinstall version')
         return
 
-    os.system(f'sudo cp {cache_path}/aurinstall/aurinstall /usr/bin/aurinstall && sudo chmod +x /usr/bin/aurinstall')
+    os.system(f'sudo cp {cache_path}/aurinstall/* /usr/bin/ && sudo chmod +x /usr/bin/aurinstall')
     print('updated to latest aurinstall version.')
 
 def update():
