@@ -188,6 +188,7 @@ def update():
 
 def remove_packages(packages):
     pacargs = opts['pacman_args']
+    
     pstr = ''.join([i + ' ' for i in packages])
     os.system(f'sudo pacman {pacargs} -R {pstr}')
 
