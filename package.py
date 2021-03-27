@@ -24,6 +24,7 @@ def install_packages(packages):
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
     pacopts = opts['pacman_args']
     gitopts = opts['git_args']
+    makepkgotps = opts['makepkg_args']
 
     for package in packages:
         api_str += f'&arg[]={package}'
@@ -69,7 +70,7 @@ def install_packages(packages):
                     print(f'error: error installing package {name}')
                     continue
         
-        retc = os.system(f'cd {package_path} && pwd && makepkg {pacopts} -si {package_path}/')
+        retc = os.system(f'cd {package_path} && pwd && makepkg {makepkgotps} -si {package_path}/')
 
         if retc != 0:
             print('warning: non-zero return code from package build.')

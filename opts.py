@@ -72,8 +72,14 @@ def parse_config_file():
             elif line.startswith('git_args'):
                 args = line.split(' ', 1)[-1]
                 opts['git_args'] += f' {args} '
+
+            elif line.startswith('makepkg_args'):
+                args = line.split(' ', 1)[-1]
+                opts['makepkg_args'] += f' {args} '
+
             elif line == '':
                 continue
+
             else:
                 print_err(f'unrecognized line in config: {_line}.')
 

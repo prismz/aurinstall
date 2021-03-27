@@ -41,7 +41,8 @@ opts = {
     'args_parsed': False,    # whether or not arguments have been parsed yet
     'config_parsed': False,  # whether or not the config file has been parsed yet
     'pacman_args': '',       # string of arguments to pass to ALL pacman calls
+    'makepkg_args': '',      # string of arguments to pass to ALL makepkg calls
     'git_args': '',          # string of arguments to pass to ALL git calls
     'blacklist': [],         # packages to blacklist (only works with AUR packages)
-    'onupdate_command': ''    # command to run on update
+    'onupdate_command': ''   # command to run on update
 }

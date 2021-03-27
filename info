@@ -45,5 +45,8 @@ Config:
  git_args
     - same as pacman_args but for git
 
+ makepkg_args
+    - same as pacman_args but for makepkg
+
 - written by Hasan Zahra
 https://github.com/HasanQZ/aurinstall
