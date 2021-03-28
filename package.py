@@ -165,12 +165,12 @@ def update():
         name = result['Name']
         ver = result['Version']
         ood = result['OutOfDate']
-        
+
         if pkgs[name] != ver:
             if ood not in (None, 'null'):
-            opt = input(f' => package {name} has been flagged out of date. continue? [y/N] ')
-            if opt.lower().strip() != 'y':
-                continue
+                opt = input(f' => package {name} has been flagged out of date. continue? [y/N] ')
+                if opt.lower().strip() != 'y':
+                    continue
 
             os.system(f'rm -rf {cache_path}/{name}')
             to_update.append(name)
