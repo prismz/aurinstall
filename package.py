@@ -178,12 +178,12 @@ def update():
     if to_update != []:
         install_packages(to_update)
     else:
-        print('no AUR packages to update!')
+        print(' => no AUR packages to update!')
 
     if opts['onupdate_command'] != '':
         onup_cmd = opts['onupdate_command']
-        print(f'running update command:')
-        print(f' => {onup_cmd}')
+        print(f' => running update command:')
+        print(f'    => {onup_cmd}')
         os.system(onup_cmd)
     
 
