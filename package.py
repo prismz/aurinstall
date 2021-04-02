@@ -121,7 +121,7 @@ def update_script():
         return
 
     os.system(f'sudo cp -r {cache_path}/aurinstall/* /usr/bin/ && sudo chmod +x /usr/bin/aurinstall')
-    print('updated to latest aurinstall version.')
+    print('    => updated to latest aurinstall version.')
 
 def update():
     gitopts = opts['git_args']
