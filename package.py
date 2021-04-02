@@ -143,7 +143,7 @@ def update():
     if opt_blacklist != []:
         print(f' => packages have been blacklisted:')
         for pkg in opt_blacklist:
-            print(f' => {pkg}')
+            print(f'   => {pkg}')
 
     # pkg_list = subprocess.getoutput('pacman -Qm').split('\n')
     for pkg in aur_pkgs:
@@ -157,7 +157,7 @@ def update():
             return
         else:
             for pkg in aur_pkgs:
-                print(f'    => package {pkg} is invalid or not an AUR package.')
+                print(f'   => package {pkg} is invalid or not an AUR package.')
             return
 
     results = metadata['results']
@@ -183,7 +183,7 @@ def update():
     if opts['onupdate_command'] != '':
         onup_cmd = opts['onupdate_command']
         print(f' => running update command:')
-        print(f'    => {onup_cmd}')
+        print(f'   => {onup_cmd}')
         os.system(onup_cmd)
     
 
