@@ -17,7 +17,7 @@ def print_package_info(metadata):
         print('    ',end='')
         print(metadata['Description'])
     else:
-        print(f'error: target not found: {name}')
+        print_err(f'target not found: {name}')
 
 def install_packages(packages):
     non_aur_package_str = ''
@@ -43,7 +43,7 @@ def install_packages(packages):
 
         retc = os.system(f'sudo pacman {pacopts} -S {non_aur_package_str}')
         if retc != 0:
-            print('error installing non-AUR packages.')
+            print_err('installing non-AUR packages.')
 
     if aur_packages == {}:
         return
@@ -67,18 +67,18 @@ def install_packages(packages):
                 os.system(f'rm -rf {package_path}')
                 result_ = os.system(f'git clone {gitopts} https://aur.archlinux.org/{name}.git {package_path}')
                 if result_:
-                    print(f'error: error installing package {name}')
+                    print_err(f'error installing package {name}')
                     continue
         
         retc = os.system(f'cd {package_path} && pwd && makepkg {makepkgotps} -si {package_path}/')
 
         if retc != 0:
-            print('warning: non-zero return code from package build.')
+            print_err('non-zero return code from package build.')
 
 def clean():
     packages_in_cache = os.listdir(cache_path)
     if len(packages_in_cache) == 0:
-        print('no packages in cache.')
+        print_err('no packages in cache.')
         return
 
     package_dict = {}
@@ -92,7 +92,7 @@ def clean():
         for pkg in packages_in_cache:
             r = os.system(f'rm -rf {cache_path}/{pkg}/')
             if r != 0:
-                print(f'error cleaning cache of package {pkg}')
+                print_err(f'error cleaning cache of package {pkg}')
             else:
                 print(f'cleaned cache: {cache_path}/{pkg}')
     elif x.strip() == '-1':
@@ -104,12 +104,12 @@ def clean():
                 pkg = package_dict[int(ind)]
                 r = os.system(f'rm -rf {cache_path}/{pkg}/')
                 if r != 0:
-                    print(f'error cleaning cache of package {pkg}')
+                    print_err(f'error cleaning cache of package {pkg}')
 
                 else:
                     print(f'cleaned cache {cache_path}/{pkg}')
             except:
-                print(f'invalid package index: {ind}')
+                print_err(f'invalid package index: {ind}')
 
 def update_script():
     gitargs = opts['git_args']
@@ -117,7 +117,7 @@ def update_script():
     os.system(f'rm -rf {cache_path}/aurinstall/')
     clone_failed = os.system(f'git clone {gitargs} https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/ >> /dev/null')
     if clone_failed:
-        print('error: error cloning new aurinstall version')
+        print_err('error cloning new aurinstall version')
         return
 
     os.system(f'sudo cp -r {cache_path}/aurinstall/* /usr/bin/ && sudo chmod +x /usr/bin/aurinstall')
@@ -141,7 +141,7 @@ def update():
     to_update = []
 
     if opt_blacklist != []:
-        print(f'Packages have been blacklisted:')
+        print(f' => packages have been blacklisted:')
         for pkg in opt_blacklist:
             print(f' => {pkg}')
 
@@ -203,7 +203,7 @@ def search_package(terms):
     json = requests.get(api_str).json()
 
     if json['resultcount'] == 0 and rc:
-        print('error: no packages found.')
+        print_err('no packages found.')
         return
 
     rw_package_data = json['results']
