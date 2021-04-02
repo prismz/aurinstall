@@ -113,7 +113,7 @@ def clean():
 
 def update_script():
     gitargs = opts['git_args']
-    print('cloning aurinstall from github to ensure latest version...')
+    print(' => cloning aurinstall from github to ensure latest version...')
     os.system(f'rm -rf {cache_path}/aurinstall/')
     clone_failed = os.system(f'git clone {gitargs} https://github.com/hasanqz/aurinstall {cache_path}/aurinstall/ >> /dev/null')
     if clone_failed:
