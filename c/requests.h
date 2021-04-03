@@ -1,17 +1,39 @@
+#pragma once
 #include <curl/curl.h>
 #include <string.h>
 #include <stdlib.h>
 
-size_t write_function(void* ptr, size_t size, size_t nmemb, void* userdata) {
-    strcat(userdata, ptr);
-    return size * nmemb;
+#include "globals.h"
+
+
+void init_string(struct string *s) {
+    s->len = 0;
+    s->ptr = malloc(s->len+1);
+    if (s->ptr == NULL) {
+        fprintf(stderr, "malloc() failed\n");
+        exit(EXIT_FAILURE);
+    }
+    s->ptr[0] = '\0';
 }
 
-void* get(char* url) {
-    char response_string[4096];
-    strcpy(response_string, "");
-    char* o = malloc(sizeof(char)*4099);
+size_t write_func(void *ptr, size_t size, size_t nmemb, struct string *s)
+{
+    size_t new_len = s->len + size*nmemb;
+    s->ptr = realloc(s->ptr, new_len+1);
+    if (s->ptr == NULL) {
+        fprintf(stderr, "realloc() failed\n");
+        exit(EXIT_FAILURE);
+    }
+    memcpy(s->ptr+s->len, ptr, size*nmemb);
+    s->ptr[new_len] = '\0';
+    s->len = new_len;
 
+    return size*nmemb;
+}
+
+struct string get(char* url) {
+    struct string s;
+    init_string(&s);
     CURL* curl = curl_easy_init();
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -19,22 +41,14 @@ void* get(char* url) {
         curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
         curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
-        char header_string[4096];
-        
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
-        
-        char* url;
-        long response_code;
-        double elapsed;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-        curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
-        curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
-        
-        curl_easy_perform(curl);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_func);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
+        CURLcode res = curl_easy_perform(curl);
+
+        /* always cleanup */
         curl_easy_cleanup(curl);
-        curl = NULL;
     }
-    strcpy(o, response_string);
-    return o;
+    return s;
+    // return response_string;
 }
