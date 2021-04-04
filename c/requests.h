@@ -5,8 +5,8 @@
 
 #include "globals.h"
 
-
-void init_string(struct string *s) {
+// most things seen here taken from CURL examples and StackOverflow
+void init_string(struct curl_res_string *s) {
     s->len = 0;
     s->ptr = malloc(s->len+1);
     if (s->ptr == NULL) {
@@ -16,7 +16,7 @@ void init_string(struct string *s) {
     s->ptr[0] = '\0';
 }
 
-size_t write_func(void *ptr, size_t size, size_t nmemb, struct string *s)
+size_t write_func(void *ptr, size_t size, size_t nmemb, struct curl_res_string *s)
 {
     size_t new_len = s->len + size*nmemb;
     s->ptr = realloc(s->ptr, new_len+1);
@@ -31,8 +31,8 @@ size_t write_func(void *ptr, size_t size, size_t nmemb, struct string *s)
     return size*nmemb;
 }
 
-struct string get(char* url) {
-    struct string s;
+struct curl_res_string get(char* url) {
+    struct curl_res_string s;
     init_string(&s);
     CURL* curl = curl_easy_init();
     if (curl) {
@@ -50,5 +50,4 @@ struct string get(char* url) {
         curl_easy_cleanup(curl);
     }
     return s;
-    // return response_string;
 }
