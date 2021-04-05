@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <unistd.h>
 
+#define MAX_ARGLEN 1096
+
 const char* BOLD = "\033[1m";
 const char* GREEN = "\033[92m";
 const char* RED = "\033[91m";
@@ -52,14 +54,6 @@ void remquotes(char *str) {
 int get_terminal_width(Options* opts) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-    opts->normal_term = 1;
-    if (w.ws_col == 0) {
-        opts->normal_term = 0;
-        return 0;
-    } else
-        opts->normal_term = 1;
-
     
     return (int)w.ws_col;
 }
@@ -97,8 +91,14 @@ void pretty_print(int indent, char data[], Options* opts) {
         }
     }
     printf("\n");
+    for (int i = 0; i < wordcount; i++)
+        strcpy(words[i], "");
 }
 
 void init(Options* opts) {
-    int w = get_terminal_width(opts);
+    // if output is not being piped or redirected, meaning terminal should show color output
+    if (isatty(STDOUT_FILENO)) {
+        opts->normal_term = 1;
+    } else
+        opts->normal_term = 0;
 }
