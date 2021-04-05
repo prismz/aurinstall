@@ -30,18 +30,21 @@ PackageData parse_package_json(char package_json[]) {
     data.ver = ver;
     data.ood = ood;
     data.url = url;
-    
 
     return data;
 }
 
-void print_package_data(PackageData data) {
-    int termw = get_terminal_width();
-    printf("aur/%s %s\n", data.name, data.ver);
+void print_package_data(PackageData data, Options* opts) {
+    int termw = get_terminal_width(opts);
 
-    // printf("\n");
     // remquotes(data.desc);
-    pretty_print(4, data.desc);
+    if (opts->normal_term == 1) {
+        printf("%saur/%s%s %s%s%s\n", RED, ENDC, data.name, GREEN, data.ver, ENDC);
+        pretty_print(4, data.desc, opts);
+    } else {
+        printf("aur/%s %s\n", data.name, data.ver);
+        printf("    %s\n", data.desc);
+    }
 
     // printf("\n");
 }

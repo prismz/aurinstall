@@ -3,8 +3,8 @@ import requests
 import sys
 import os
 
-from util import *
-from global_vars import *
+from aurinstall_src.util import *
+from aurinstall_src.global_vars import *
 
 def print_package_info(metadata):
     version = metadata['Version']

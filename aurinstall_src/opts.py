@@ -1,5 +1,5 @@
-from global_vars import *
-from util import *
+from aurinstall_src.global_vars import *
+from aurinstall_src.util import *
 import sys
 
 # sets flags read from optional arguments (--noconfirm, etc) and returns all non-optional arguments

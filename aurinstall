@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-from global_vars import *
-from package import *
-from util import *
-from opts import *
+from aurinstall_src.global_vars import *
+from aurinstall_src.package import *
+from aurinstall_src.util import *
+from aurinstall_src.opts import *
 
 
 help_ = open(f'{ROOT_DIR}/info', 'r').read()

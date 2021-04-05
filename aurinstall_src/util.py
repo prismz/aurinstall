@@ -1,5 +1,5 @@
 import os
-from global_vars import *
+from aurinstall_src.global_vars import *
 
 def pretty_print(text: str, indent=4, first_indent=4):
     try:

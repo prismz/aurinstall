@@ -6,10 +6,16 @@
 #include <assert.h>
 #include <unistd.h>
 
+const char* BOLD = "\033[1m";
+const char* GREEN = "\033[92m";
+const char* RED = "\033[91m";
+const char* ENDC = "\033[0m";
+
 struct curl_res_string {
     char *ptr;
     size_t len;
 };
+
 typedef struct PackageData {
     char* name;
     char* desc;
@@ -17,6 +23,18 @@ typedef struct PackageData {
     char* url;
     char* ood;
 } PackageData;
+
+typedef struct Options {
+    int normal_term;
+} Options;
+
+void free_package_data(PackageData data) {
+    free(data.name);
+    free(data.desc);
+    free(data.ver);
+    free(data.url);
+    free(data.ood);
+}
 
 // json results typically return with quotes, so this function removes them.
 void remquotes(char *str) {
@@ -31,21 +49,29 @@ void remquotes(char *str) {
     str[len-2] = 0;
 }
 
-int get_terminal_width() {
+int get_terminal_width(Options* opts) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
-    return w.ws_col;
+    opts->normal_term = 1;
+    if (w.ws_col == 0) {
+        opts->normal_term = 0;
+        return 0;
+    } else
+        opts->normal_term = 1;
+
+    
+    return (int)w.ws_col;
 }
 
-void pretty_print(int indent, char data[]) {
+void pretty_print(int indent, char data[], Options* opts) {
     int slen = strlen(data);
-    int termwidth = get_terminal_width() - indent;
+    int termwidth = get_terminal_width(opts) - indent;
 
     char words[slen][slen];
     int wordcount = 0;
     int printed = 0;
-
+    
     char* ptr = strtok(data, " ");
     while (ptr != NULL) {
         strcpy(words[wordcount], ptr);
@@ -71,5 +97,8 @@ void pretty_print(int indent, char data[]) {
         }
     }
     printf("\n");
+}
 
+void init(Options* opts) {
+    int w = get_terminal_width(opts);
 }
