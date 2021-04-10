@@ -3,15 +3,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <assert.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <errno.h>
 
 #define MAX_ARGLEN 1096
 
-const char* BOLD = "\033[1m";
-const char* GREEN = "\033[92m";
-const char* RED = "\033[91m";
-const char* ENDC = "\033[0m";
+static const char* BOLD = "\033[1m";
+static const char* GREEN = "\033[92m";
+static const char* RED = "\033[91m";
+static const char* ENDC = "\033[0m";
+static const char* cache_path = "~/.cache/aurinstall";
+static char* makepkg_args = "";
+static char* git_args = "";
+static char* pacman_args = "";
 
 struct curl_res_string {
     char *ptr;
@@ -101,4 +109,19 @@ void init(Options* opts) {
         opts->normal_term = 1;
     } else
         opts->normal_term = 0;
+
+    DIR* dir = opendir(cache_path);
+    if (dir) {
+        // cache already exists
+        closedir(dir);
+    }
+    else if (errno == ENOENT) {
+        mkdir(cache_path, 0777);
+    } else {
+        printf("ERROR: error making or checking cache directory at %s\n", cache_path);
+    }
+        
+
+
+    
 }

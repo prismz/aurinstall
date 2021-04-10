@@ -1,81 +1,62 @@
 #pragma once
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
-#include <assert.h>
-#include "simple-json/simple_json.h"
-#include "globals.h"
 
-PackageData parse_package_json(char package_json[]) {
-    PackageData data;
-    char* name = json_parse_dict(package_json, "Name");
-    char* desc = json_parse_dict(package_json, "Description");
-    char* ver  = json_parse_dict(package_json, "Version");
-    char* ood  = json_parse_dict(package_json, "OutOfDate");
-    char* base_url = "https://aur.archlinux.org/";
-    char* url = malloc(sizeof(char)*(strlen(name)+strlen(base_url)+10));
+#include "util.h"
 
-    strcpy(url, base_url);
-    strcat(url, name);
-    strcat(url, ".git");
-    remquotes(name);
-    remquotes(desc);
-    remquotes(ver);
-    remquotes(ood);
+char* cache_path = "~/.cache/aurinstall";
 
-    data.name = name;
-    data.desc = desc;
-    data.ver = ver;
-    data.ood = ood;
-    data.url = url;
+int install_package(char* name) {
+    size_t package_path_size = sizeof(char) * strlen(cache_path)+90+strlen(name);
+    char* package_path = malloc(package_path_size);
+    snprintf(package_path, package_path_size, "%s/%s", cache_path, name);
 
-    return data;
-}
 
-void print_package_data(PackageData data, Options* opts) {
-    if (opts->normal_term) {
-        printf("%saur/%s%s %s%s%s\n", RED, ENDC, data.name, GREEN, data.ver, ENDC);
-        pretty_print(4, data.desc, opts);
-    } else {
-        printf("aur/%s %s\n", data.name, data.ver);
-        printf("    %s\n", data.desc);
-    }
-}
+    size_t clone_command_size = sizeof(char)*(100+strlen(name)*5+strlen(cache_path));
+    char* clone_command = malloc(clone_command_size);
+    snprintf(clone_command, clone_command_size, "git clone https://aur.archlinux.org/%s.git %s/%s", name, cache_path, name);
 
-void search_package(char* searchterm, char args[][MAX_ARGLEN], int argcount, Options* opts) {
-    char url[52+strlen(searchterm)];
-    strcpy(url, "https://aur.archlinux.org/rpc/?v=5&type=search&arg=");
-    strcat(url, searchterm);
+    int clone_return_code = system(clone_command);
 
-    struct curl_res_string response = get(url);
-    char* _resultcount = json_parse_dict(response.ptr, "resultcount");
-    char* ptr;
-    long resultcount = strtol(_resultcount, &ptr, 10);
+    DirInfo package_path_info = dirinfo(package_path);
+    if (package_path_info.exists && package_path_info.filecount > 0 && clone_command != 0) {
+        char* input_str = malloc(sizeof(char) * 255);
+        strcpy(input_str, "");
+        printf(":: Files already exist for package %s. Would you like to rebuild the package? [Y/n] ", name);
+        fgets(input_str, 255, stdin);
 
-    free(_resultcount);
-
-    if (resultcount == 0)
-        return;
-
-    char* results = json_parse_dict(response.ptr, "results");
-
-    for (int i = 0; i < resultcount; i++) {
-        char* current_package_json = json_parse_arr(results, i);
-        PackageData data = parse_package_json(current_package_json);
-
-        for (int j = 0; j < argcount; j++) {
-            char* cstr = args[j];
-            // printf("%s ", cstr);
-            if (strstr(data.name, cstr))
-                print_package_data(data, opts);
+        if (!strcmp(input_str, "n")) {
+            char* rmstr = malloc(sizeof(char)*(40+strlen(package_path)));
+            strcpy(rmstr, "rm -rf ");
+            strcat(rmstr, package_path);
+            int rm_return_code = system(rmstr);
+            if (rm_return_code != 0) {
+                fprintf(stderr, "error: failed to remove all package files in directory %s.\n", package_path);
+                free(package_path);
+                free(clone_command);
+                free(rmstr);
+                free(input_str);
+                return EXIT_FAILURE;
+            }
+            free(rmstr);
         }
-
-        free_package_data(data);
-        free(current_package_json);
+        free(input_str);
+    } else if (clone_return_code != 0) {
+        fprintf(stderr, "error: non-zero return code from git-clone of package %s.\n", name);
+        return EXIT_FAILURE;
     }
 
-    free(response.ptr);
-    free(results);
+    size_t makepkg_command_size = sizeof(char) * (200 + strlen(package_path));
+    char* makepkg_command = malloc(makepkg_command_size);
+    snprintf(makepkg_command, makepkg_command_size, "cd %s && makepkg -si", package_path);
+    int makepkg_returncode = system(makepkg_command);
+
+    if (makepkg_returncode != 0) {
+        fprintf(stderr, "error: non-zero return code from makepkg for package %s.\n", name);
+    }
+
+
+    free(package_path);
+    free(clone_command);
 }

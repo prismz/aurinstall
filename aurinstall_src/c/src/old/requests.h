@@ -3,10 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-struct curl_res_string {
-    char *ptr;
-    size_t len;
-};
+#include "globals.h"
 
 // most things seen here taken from CURL examples and StackOverflow
 void init_string(struct curl_res_string *s) {
