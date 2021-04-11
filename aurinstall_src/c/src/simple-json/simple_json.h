@@ -31,6 +31,7 @@ void* s_malloc(size_t s) {
         fprintf(stderr, "OUT OF MEMORY!");
         exit(1);
     }
+    return c;
 }
 
 void s_free(void* tgt) {
@@ -43,7 +44,6 @@ char* json_parse_dict(char str[], char _key[]) {
     int in_string = 0;
     int on_target = 0;
     int depth = 0;
-    int found = 0;
     int s_offset = 0;
     int e_offset = 0;
 
@@ -52,7 +52,7 @@ char* json_parse_dict(char str[], char _key[]) {
     strcat(key, _key);
     strcat(key, "\"");
 
-    char* value = s_malloc(sizeof(char) * (strlen(str)+5));
+    // char* value = s_malloc(sizeof(char) * (strlen(str)+5));
     char* current_str = s_malloc(sizeof(char) * strlen(str));
     int current_str_i = 0;
     strcpy(current_str, "");
@@ -91,7 +91,6 @@ char* json_parse_dict(char str[], char _key[]) {
             if (c == ':' && depth == 0) {
                 if (!strcmp(current_str, key)) {
                     on_target = 1;
-                    found = 1;
                 } else {
                     on_target = 0;
                 }
@@ -133,7 +132,6 @@ char* json_parse_arr(char str[], int index) {
     int in_string = 0;
     int depth = 0;
     int s_offset = 0;
-    int e_offset = 0;
 
     for (int i = 0; i < strl; i++) {
         char c = str[i];

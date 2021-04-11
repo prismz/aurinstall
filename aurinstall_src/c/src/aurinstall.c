@@ -14,7 +14,8 @@ int main() {
     // char searchterms[SEARCH_MAX_ARG_COUNT][SEARCH_MAX_ARG_LEN];
     ArgList x;
     strcpy(x.args[0], "gtk");
-    x.argcount = 1;
+    strcpy(x.args[1], "python");
+    x.argcount = 2;
     // strcpy(searchterms[0],"ungoogled-chromium");
     // strcpy(search_package)
     search_package(&x);

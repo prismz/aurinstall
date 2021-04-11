@@ -47,7 +47,7 @@ struct curl_res_string get(char* url) {
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_func);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
-        CURLcode res = curl_easy_perform(curl);
+        curl_easy_perform(curl);
 
         /* always cleanup */
         curl_easy_cleanup(curl);

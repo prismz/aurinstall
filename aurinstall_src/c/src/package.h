@@ -70,6 +70,8 @@ int install_package(char* name) {
 
     free(package_path);
     free(clone_command);
+
+    return EXIT_SUCCESS;
 }
 
 void display_package_json(char* json) {
@@ -115,11 +117,15 @@ typedef struct ArgList {
     char args[SEARCH_MAX_ARG_COUNT][SEARCH_MAX_ARG_LEN];
     int argcount;
 } ArgList;
+
 /* 
 trys to have the fastest method of searching by using the logic that the longer
 a searchterm is, the less results it will have.
 */
 void search_package(ArgList* args) {
+    if (args->argcount == 0)
+        return;
+
     char* base_search_url = "https://aur.archlinux.org/rpc/?v=5&type=search&arg=";
     // int lengths[termcount];
     if (args->argcount == 1) {
@@ -135,8 +141,6 @@ void search_package(ArgList* args) {
 
         char* results = json_parse_dict(res.ptr, "results");
 
-
-        // printf("%s\n", results);
         for (int i = 0; i < resultcount; i++) {
             char* current_package_json = json_parse_arr(results, i);
             display_package_json(current_package_json);
@@ -145,10 +149,37 @@ void search_package(ArgList* args) {
 
         }
         free(results);
+    } else if (args->argcount >= 2) {
+        size_t search_api_str_size = sizeof(char) * 53 + strlen(args->args[0]);
+        char* search_api_str = malloc(search_api_str_size);
+        snprintf(search_api_str, search_api_str_size, "%s%s", base_search_url, args->args[0]);
+        
+        struct curl_res_string res = get(search_api_str);
+        char* resultcount_ = json_parse_dict(res.ptr, "resultcount");
+        char* nptr;
+        int resultcount = strtol(resultcount_, &nptr, 0);
+        free(resultcount_);
 
-        // display_package_json(res.ptr);
+        char* results = json_parse_dict(res.ptr, "results");
+
+        for (int i = 0; i < resultcount; i++) {
+            char* current_package_json = json_parse_arr(results, i);
+            char* current_package_name = json_parse_dict(current_package_json, "Name");
+            int show = 1;
+            for (int j = 0; j < args->argcount; j++) {
+                if (!strstr(current_package_name, args->args[j])) {
+                    show = 0;
+                }
+            }
+            if (show)
+                display_package_json(current_package_json);
+
+            free(current_package_json);
+            free(current_package_name);
+
+        }
+        free(results);
+
+        
     }
-    // for (int i = 0; i < termcount; i++) {
-    //     lengths[i] = strlen(searchterms[i]);
-    // }
 }
