@@ -73,26 +73,79 @@ int install_package(char* name) {
 }
 
 void display_package_json(char* json) {
+    char* name = json_parse_dict(json, "Name");
+    char* desc = json_parse_dict(json, "Description");
+    char* ood = json_parse_dict(json, "OutOfDate");
 
+    remquotes(name);
+    remquotes(desc);
+    remquotes(ood);
+
+    // size_t install_check_cmd_size = sizeof(char) * (strlen(name) + 40);
+    // char* install_check_cmd = malloc(install_check_cmd_size);
+    // // "&>" operator redirects stdout and stderr
+    // snprintf(install_check_cmd, install_check_cmd_size, "pacman -Qi %s &> /dev/null", name);
+    // int installed = !(system(install_check_cmd));
+
+
+    if (normal_tty) {
+        printf("%saur/%s%s ", RED, ENDC, name);
+        if (strcmp(ood, "null"))
+            printf("(Out of Date) ");
+        // if (installed)
+        //     printf("(Installed)");
+        printf("\n");
+        pretty_print(4, desc);
+    } else {
+        printf("aur/%s ", name);
+        if (strcmp(ood, "null"))
+            printf("(Out of Date) ");
+        // if (installed)
+        //     printf("(Installed) ");
+        printf("\n");
+        printf("    %s\n", desc);
+    }
+
+    free(name);
+    free(desc);
+    free(ood);
 }
 
+typedef struct ArgList {
+    char args[SEARCH_MAX_ARG_COUNT][SEARCH_MAX_ARG_LEN];
+    int argcount;
+} ArgList;
 /* 
 trys to have the fastest method of searching by using the logic that the longer
 a searchterm is, the less results it will have.
 */
-void search_package(char* searchterms[SEARCH_MAX_ARG_COUNT], int termcount) {
+void search_package(ArgList* args) {
     char* base_search_url = "https://aur.archlinux.org/rpc/?v=5&type=search&arg=";
     // int lengths[termcount];
-    if (termcount == 1) {
-        size_t search_api_str_size = sizeof(char) * 53 + strlen(searchterms[0]);
+    if (args->argcount == 1) {
+        size_t search_api_str_size = sizeof(char) * 53 + strlen(args->args[0]);
         char* search_api_str = malloc(search_api_str_size);
-        snprintf(search_api_str, search_api_str_size, "%s%s", base_search_url, searchterms[0]);
+        snprintf(search_api_str, search_api_str_size, "%s%s", base_search_url, args->args[0]);
         struct curl_res_string res = get(search_api_str);
 
-        char* resultcount_ = json_parse_dict(res.ptr, "results");
+        char* resultcount_ = json_parse_dict(res.ptr, "resultcount");
         char* nptr;
         int resultcount = strtol(resultcount_, &nptr, 0);
-        printf("%d\n", resultcount);
+        free(resultcount_);
+
+        char* results = json_parse_dict(res.ptr, "results");
+
+
+        // printf("%s\n", results);
+        for (int i = 0; i < resultcount; i++) {
+            char* current_package_json = json_parse_arr(results, i);
+            display_package_json(current_package_json);
+
+            free(current_package_json);
+
+        }
+        free(results);
+
         // display_package_json(res.ptr);
     }
     // for (int i = 0; i < termcount; i++) {

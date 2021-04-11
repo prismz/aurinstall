@@ -12,9 +12,12 @@ int main() {
     // printf("%s\n", res.ptr);
     // install_package("ungoogled-chromium");
     // char searchterms[SEARCH_MAX_ARG_COUNT][SEARCH_MAX_ARG_LEN];
+    ArgList x;
+    strcpy(x.args[0], "gtk");
+    x.argcount = 1;
     // strcpy(searchterms[0],"ungoogled-chromium");
     // strcpy(search_package)
-    // search_package(searchterms, 1);
+    search_package(&x);
     // printf("%d\n", is_confirmation("y"));
     // system("git clone https://aur.archlinux.org/ungoogled-chromium.git ~/.cache/aurinstall/ungoogled-chromium");
     // printf("%s\n", getenv("HOME"));

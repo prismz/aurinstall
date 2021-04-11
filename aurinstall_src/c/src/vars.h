@@ -9,7 +9,24 @@
 #endif
 
 static char* cache_path;
+static int normal_tty;
 
 #ifndef GIT_UNKNOWN_IDENTITY_ERR
 #define GIT_UNKNOWN_INDENTITY_ERR 32768
+#endif
+
+#ifndef BOLD
+#define BOLD "\033[1m"
+#endif
+
+#ifndef GREEN
+#define GREEN "\033[92m"
+#endif
+
+#ifndef RED
+#define RED "\033[91m"
+#endif
+
+#ifndef ENDC
+#define ENDC "\033[0m"
 #endif
