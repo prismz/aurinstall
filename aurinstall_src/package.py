@@ -29,7 +29,7 @@ def install_packages(packages):
     for package in packages:
         api_str += f'&arg[]={package}'
 
-    metadata = requests.get(api_str, verify=False).json()
+    metadata = requests.get(api_str).json()
     result_count = metadata['resultcount']
 
     aur_packages = {}
@@ -151,7 +151,7 @@ def update():
         api_str += f'&arg[]={pkg_name}'
         pkgs[pkg_name] = pkg_ver
 
-    metadata = requests.get(api_str, verify=False).json()
+    metadata = requests.get(api_str).json()
     if metadata['resultcount'] <= 0:
         if aur_pkgs == []:
             return
@@ -200,7 +200,7 @@ def search_package(terms):
 
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=search&arg={terms[0]}'
 
-    json = requests.get(api_str, verify=False).json()
+    json = requests.get(api_str).json()
 
     if json['resultcount'] == 0 and rc:
         print_err('no packages found.')
