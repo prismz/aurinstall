@@ -133,7 +133,10 @@ def update():
     os.system(f'sudo pacman {pacopts} -Syu')
     print('checking AUR packages for updates...')
     print(' => beginning information retrieval...')
-    aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').split('\n') if pkg.split(' ', 1)[0] not in opt_blacklist]
+    if subprocess.getoutput('pacman -Qm').strip() == '':
+        aur_pkgs = []
+    else:
+        aur_pkgs = [pkg for pkg in subprocess.getoutput('pacman -Qm').strip().split('\n') if pkg.split(' ', 1)[0] not in opt_blacklist]
 
     api_str = f'https://aur.archlinux.org/rpc/?v=5&type=info'
     pkgs = {}
@@ -147,9 +150,12 @@ def update():
 
     # pkg_list = subprocess.getoutput('pacman -Qm').split('\n')
     for pkg in aur_pkgs:
-        pkg_name, pkg_ver = pkg.split(' ', 1)
-        api_str += f'&arg[]={pkg_name}'
-        pkgs[pkg_name] = pkg_ver
+        try:
+            pkg_name, pkg_ver = pkg.split(' ', 1)
+            api_str += f'&arg[]={pkg_name}'
+            pkgs[pkg_name] = pkg_ver
+        except:
+            pass
 
     metadata = requests.get(api_str).json()
     if metadata['resultcount'] <= 0:

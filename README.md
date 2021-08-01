@@ -1,6 +1,5 @@
 # aurinstall
 A simple AUR helper written in Python.
-No longer updated as often since I switched to Debian.
 
 ## **Installation**:
 download the script, and run it once with "aurinstall update". It should copy itself to /usr/bin automatically.
