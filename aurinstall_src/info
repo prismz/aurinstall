@@ -49,4 +49,4 @@ Config:
     - same as pacman_args but for makepkg
 
 - written by Hasan Zahra
-https://github.com/HasanQZ/aurinstall
+https://github.com/prismz/aurinstall
