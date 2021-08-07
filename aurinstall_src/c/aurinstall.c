@@ -45,7 +45,10 @@ main(int argc, char** argv)
         case oper_clean:
             clean_package_cache(cache_path);
             break;
-
+        case oper_remove:
+            for (int i = 1; i < arg_c; i++)
+                remove_package(args[i]); 
+            break;
         default:
             printf("unimplemented.\n");
             break;

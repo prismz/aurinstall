@@ -110,7 +110,6 @@ install_aur_package(char* name, char* cache_dir)
             free_api_results(ar);
             sfree(op);
             sfree(package_dest);
-            sfree(info_str);
             return;
         }
         sfree(op);
@@ -322,6 +321,7 @@ clean_package_cache(char* cache_dir)
         sfree(rm_cmd);
         printf(" - done\n");
     }
+    closedir(dir);
     printf("done.\n");
 }
 
