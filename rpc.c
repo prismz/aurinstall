@@ -89,28 +89,28 @@ parse_package_data(struct json_object* result)
     const char* ood = json_object_get_string(jobj_ood);
 
     if (name != NULL) {
-        pi->name = smalloc(sizeof(char) * (strlen(name) + 5), "pi->name - parse_package_data() - rpc.c");
+        pi->name = smalloc(sizeof(char) * (strlen(name) + 1), "pi->name - parse_package_data() - rpc.c");
         strcpy(pi->name, name);
     } else {
         pi->name = NULL;
     }
 
     if (desc != NULL) {
-        pi->desc = smalloc(sizeof(char) * (strlen(desc) + 5), "pi->desc - parse_package_data() - rpc.c");
+        pi->desc = smalloc(sizeof(char) * (strlen(desc) + 1), "pi->desc - parse_package_data() - rpc.c");
         strcpy(pi->desc, desc);
     } else {
         pi->desc = NULL;
     }
 
     if (ver != NULL) {
-        pi->ver = smalloc(sizeof(char) * (strlen(ver) + 5), "pi->ver - parse_package_data() - rpc.c");
+        pi->ver = smalloc(sizeof(char) * (strlen(ver) + 1), "pi->ver - parse_package_data() - rpc.c");
         strcpy(pi->ver, ver);
     } else {
         pi->ver = NULL;
     }
 
     if (ood != NULL) {
-        pi->ood = smalloc(sizeof(char) * (strlen(ood) + 5), "pi->ood - parse_package_data() - rpc.c");
+        pi->ood = smalloc(sizeof(char) * (strlen(ood) + 1), "pi->ood - parse_package_data() - rpc.c");
         strcpy(pi->ood, ood);
     } else {
         pi->ood = NULL;
