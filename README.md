@@ -30,5 +30,5 @@ You can install multiple packages with a single command. For example:
 You can clean the cache by running `aurinstall clean`.
 By default the cache is located at `~/.cache/aurinstall/`
 
-## **Removing packages**
+## **Removing Packages**
 You can remove packages the same way you'd install them, just replace `install` with `remove`.
