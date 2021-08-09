@@ -1,12 +1,12 @@
 # aurinstall
-A simple AUR helper written in Python.
+A simple AUR helper written in C.
+It can be configured using the source code.
 
 ## **Installation**:
-download the script, and run it once with "aurinstall update". It should copy itself to /usr/bin automatically.
-
+Download the source code, run `make` and copy `aurinstall` to `/usr/local/bin/`
 
 ## **Searching**:
-aurinstall will search the standard repos as well as the AUR. You can specify more than one searchterm to narrow your search.
+aurinstall only searches the AUR. You can specify more than one searchterm to narrow your search.
 For example:
 `
 aurinstall search chromium ungoogled
@@ -20,7 +20,13 @@ aur/ungoogled-chromium 88.0.4324.182-1
 
 and adding `git` would only show `ungoogled-chromium-git`.
 
-
 ## **Installing Packages**:
 You can install multiple packages with a single command. For example:
 `aurinstall install package1 package2 package3 ...`
+
+## **Cleaning the Cache**
+You can clean the cache by running `aurinstall clean`.
+By default the cache is located at `~/.cache/aurinstall/`
+
+## **Removing packages
+You can remove packages the same way you'd install them, just replace `install` with `remove`.

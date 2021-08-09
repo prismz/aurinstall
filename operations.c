@@ -151,7 +151,6 @@ install_aur_package(char* name, char* cache_dir)
     snprintf(makepkg_cmd, makepkg_cmd_size, "cd %s && makepkg -si", package_dest);
     sfree(package_dest);
 
-    printf("begin makepkg\n");
     int makepkg_c = system(makepkg_cmd);
     sfree(makepkg_cmd);
 
@@ -175,6 +174,12 @@ update_installed_packages(char* cache_dir)
      */
     int call_again = 0;
 
+    int check = system("pacman -Qm &> /dev/null");
+    if (check != EXIT_SUCCESS) {
+        fprintf(stderr, "failed to get info for AUR packages.");
+        return 0;
+    }
+    
     FILE* fp = popen("pacman -Qm", "r");
     char* cbuff = smalloc(sizeof(char) * 1024, "cbuff - update_installed_packages() - operations.c");
 
@@ -201,6 +206,8 @@ update_installed_packages(char* cache_dir)
         char* pkg_ver = ptr;
 
         if (current_package >= 149 || (request_len + 20 + strlen(pkg_name)) >= 4443) {
+            free(cbuff_cpy);
+            free(pkg_name);
             call_again = 1;
             break;
         }
@@ -267,7 +274,11 @@ update_installed_packages(char* cache_dir)
         char* cpkg_pv = package_list[i]->ver;
 
         right_pad_print_str(pi->name, max_name_len, 3);
-        right_pad_print_str(cpkg_pv,  max_ver_len, 3);
+        if (cpkg_pv != NULL)
+            right_pad_print_str(cpkg_pv,  max_ver_len, 3);
+        else
+            right_pad_print_str("(none)", max_ver_len, 3);
+
         right_pad_print_str(pi->ver,  max_ver_len, 3);
 
         if (!strcmp(pi->name, cpkg_pn) && strcmp(pi->ver, cpkg_pv)) {
