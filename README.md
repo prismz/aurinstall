@@ -3,7 +3,9 @@ A simple AUR helper written in C.
 It can be configured using the source code.
 
 ## **Installation**:
-Download the source code, run `make` and copy `aurinstall` to `/usr/local/bin/`
+You'll need to install the packages `curl`, `json-c`, and `gcc`.
+
+Download the source code, run `make` and copy `aurinstall` to `/usr/local/bin/`.
 
 ## **Searching**:
 aurinstall only searches the AUR. You can specify more than one searchterm to narrow your search.
