@@ -5,7 +5,7 @@ It can be configured using the source code.
 ## **Installation**:
 You'll need to install the packages `curl`, `json-c`, and `gcc`.
 
-Download the source code, run `make` and copy `aurinstall` to `/usr/local/bin/`.
+Download the source code and run `sudo make install`.
 
 ## **Searching**:
 aurinstall only searches the AUR. You can specify more than one searchterm to narrow your search.
