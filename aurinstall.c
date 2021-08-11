@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void
 usage(void)
@@ -79,6 +80,7 @@ main(int argc, char** argv)
     sfree(home_folder);
 
     int done_updating = 0;
+    char* pkg_str;
 
     switch (oper) {
         case oper_search:
@@ -96,8 +98,14 @@ main(int argc, char** argv)
             clean_package_cache(cache_path);
             break;
         case oper_remove:
-            for (int i = 1; i < arg_c; i++)
-                remove_package(args[i]); 
+            pkg_str = smalloc(sizeof(char) * (256 * arg_c), "pkg_str - main() - aurinstall.c");
+            strcpy(pkg_str, "");
+            for (int i = 1; i < arg_c; i++) {
+                strcat(pkg_str, args[i]);
+                strcat(pkg_str, " ");
+            }
+            remove_package(pkg_str); 
+            sfree(pkg_str);
             break;
         case oper_version:
             version();
