@@ -34,7 +34,7 @@
 struct api_results*
 parse_api_results(struct curl_str* cs)
 {
-    struct api_results* ar = smalloc(sizeof(struct api_results), "ar - parse_api_results() - rpc.c");
+    struct api_results* ar = smalloc(sizeof(struct api_results));
 
     struct json_object* jobj_results = json_tokener_parse(cs->ptr);
     struct json_object* jobj_type;
@@ -45,7 +45,7 @@ parse_api_results(struct curl_str* cs)
     const char* type = json_object_get_string(jobj_type);
 
     if (type != NULL) {
-        ar->type = smalloc(sizeof(char) * (strlen(type) + 1), "ar->type - parse_api_results() - rpc.c");
+        ar->type = smalloc(sizeof(char) * (strlen(type) + 1));
         strcpy(ar->type, type);
     }
 
@@ -55,7 +55,7 @@ parse_api_results(struct curl_str* cs)
         const char* err = json_object_get_string(jobj_err);
 
         if (err != NULL) {
-            ar->error = smalloc(sizeof(char) * (strlen(err) + 1), "ar->error - parse_api_results() - rpc.c");
+            ar->error = smalloc(sizeof(char) * (strlen(err) + 1));
             strcpy(ar->error, err);
         }
     }
@@ -71,7 +71,7 @@ parse_api_results(struct curl_str* cs)
 struct package_data*
 parse_package_data(struct json_object* result)
 {
-    struct package_data* pi = smalloc(sizeof(struct package_data), "pi - parse_package_data() - rpc.c");
+    struct package_data* pi = smalloc(sizeof(struct package_data));
 
     struct json_object* jobj_name;
     struct json_object* jobj_desc;
@@ -89,28 +89,28 @@ parse_package_data(struct json_object* result)
     const char* ood = json_object_get_string(jobj_ood);
 
     if (name != NULL) {
-        pi->name = smalloc(sizeof(char) * (strlen(name) + 1), "pi->name - parse_package_data() - rpc.c");
+        pi->name = smalloc(sizeof(char) * (strlen(name) + 1));
         strcpy(pi->name, name);
     } else {
         pi->name = NULL;
     }
 
     if (desc != NULL) {
-        pi->desc = smalloc(sizeof(char) * (strlen(desc) + 1), "pi->desc - parse_package_data() - rpc.c");
+        pi->desc = smalloc(sizeof(char) * (strlen(desc) + 1));
         strcpy(pi->desc, desc);
     } else {
         pi->desc = NULL;
     }
 
     if (ver != NULL) {
-        pi->ver = smalloc(sizeof(char) * (strlen(ver) + 1), "pi->ver - parse_package_data() - rpc.c");
+        pi->ver = smalloc(sizeof(char) * (strlen(ver) + 1));
         strcpy(pi->ver, ver);
     } else {
         pi->ver = NULL;
     }
 
     if (ood != NULL) {
-        pi->ood = smalloc(sizeof(char) * (strlen(ood) + 1), "pi->ood - parse_package_data() - rpc.c");
+        pi->ood = smalloc(sizeof(char) * (strlen(ood) + 1));
         strcpy(pi->ood, ood);
     } else {
         pi->ood = NULL;
@@ -137,4 +137,14 @@ free_api_results(struct api_results* ar)
 {
     sfree((char*)ar->type);
     sfree((char*)ar->error);
+}
+
+int
+pkg_array_contains(struct package_data** haystack, size_t n, char* needle)
+{
+    for (int i = 0; (size_t)i < n; i++) {
+        if (!strcmp(haystack[i]->name, needle))
+            return 1;
+    }
+    return 0;
 }

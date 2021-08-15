@@ -34,11 +34,15 @@ enum operation {
     oper_usage
 };
 
+struct package_data**
+get_installed_packages(int* npkg, int* max_name_len,
+                       int* max_ver_len, char* information_request,
+                       size_t* request_len, int* call_again);
+                       
 void search_aur(char** searchterms, size_t searchterm_count);
 void install_aur_package(char* name, char* cache_dir);
 int update_installed_packages(char* cache_dir);
 void clean_package_cache(char* cache_dir);
-void remove_package(char* name);
-
+void remove_packages(char* packages);
 
 #endif

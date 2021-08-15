@@ -23,7 +23,7 @@
 
 #include <stdio.h>
 
-void* smalloc(size_t size, char* desc);
+void* smalloc(size_t size);
 void* srealloc(void* ptr, size_t size);
 void sfree(void* ptr);
 

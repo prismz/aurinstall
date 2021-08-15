@@ -22,8 +22,9 @@
 #define UTIL_H
 
 #define BOLD "\033[1m"
-#define GREEN "\033[92m"
 #define RED "\033[91m"
+#define GREEN "\033[92m"
+#define BLUE "\033[94m"
 #define ENDC "\033[0m"
 
 #include <stdio.h>

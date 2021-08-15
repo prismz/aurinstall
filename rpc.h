@@ -45,5 +45,6 @@ struct api_results* parse_api_results(struct curl_str* cs);
 struct package_data* parse_package_data(struct json_object* result);
 void free_package_data(struct package_data* pi);
 void free_api_results(struct api_results* ar);
+int pkg_array_contains(struct package_data** haystack, size_t n, char* needle);
 
 #endif

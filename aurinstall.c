@@ -18,6 +18,7 @@
  * https://github.com/prismz/aurinstall
  */
 
+#include "aurinstall.h"
 #include "mem.h"
 #include "util.h"
 #include "requests.h"
@@ -48,7 +49,7 @@ usage(void)
 void
 version(void)
 {
-    printf("aurinstall v1.0\n");
+    printf("aurinstall %s\n", VERSION);
     printf("Copyright (C) 2021 Hasan Zahra\n");
     printf("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\n");
     printf("This is free software: you are free to change and redistribute it.\n");
@@ -71,11 +72,13 @@ main(int argc, char** argv)
     if (oper == -1)
         die(stderr, "invalid operation.", 1);
 
-    if (arg_c == 1 && oper != oper_update && oper != oper_clean && oper != oper_version && oper != oper_usage)
+    if (arg_c == 1 && 
+        oper != oper_update && oper != oper_clean && 
+        oper != oper_version && oper != oper_usage)
         die(stderr, "please provide an argument for the operation.", 1);
 
     char* home_folder = get_homedir();
-    char* cache_path = smalloc(256, "cache_path - main() - aurinstall.c");
+    char* cache_path = smalloc(sizeof(char) * 256);
     snprintf(cache_path, 256, "%s/.cache/aurinstall", home_folder);
     sfree(home_folder);
 
@@ -98,13 +101,13 @@ main(int argc, char** argv)
             clean_package_cache(cache_path);
             break;
         case oper_remove:
-            pkg_str = smalloc(sizeof(char) * (256 * arg_c), "pkg_str - main() - aurinstall.c");
+            pkg_str = smalloc(sizeof(char) * (256 * arg_c));
             strcpy(pkg_str, "");
             for (int i = 1; i < arg_c; i++) {
                 strcat(pkg_str, args[i]);
                 strcat(pkg_str, " ");
             }
-            remove_package(pkg_str); 
+            remove_packages(pkg_str); 
             sfree(pkg_str);
             break;
         case oper_version:

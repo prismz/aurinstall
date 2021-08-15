@@ -18,19 +18,13 @@
  * https://github.com/prismz/aurinstall
  */
 
-#ifndef REQUESTS_H
-#define REQUESTS_H
+#ifndef AURINSTALL_H
+#define AURINSTALL_H
 
-#include <stdio.h>
-#include <stdlib.h>
+#define VERSION "v1.1"
 
-struct curl_str {
-    char* ptr;
-    size_t len;
-};
-
-void init_string(struct curl_str *s);
-size_t write_func(void *ptr, size_t size, size_t nmemb, struct curl_str *s);
-struct curl_str requests_get(char* url);
+void usage(void);
+void version(void);
+int main(int argc, char** argv);
 
 #endif
