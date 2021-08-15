@@ -34,12 +34,12 @@
 char**
 parse_args(int argc, char** argv, int* nargc_l)
 {
-    char** nargv = smalloc(sizeof(char*) * (argc - 1), "nargv - parse_args() - argparse.c");
+    char** nargv = smalloc(sizeof(char*) * (argc - 1));
     int nargc = 0;
     for (int i = 1; i < argc; i++) {
         char* carg = argv[i];
         if (carg[0] != '-') {
-            nargv[nargc] = smalloc(strlen(carg) + 1, "nargv[nargc] - parse_args() - argparse.c");
+            nargv[nargc] = smalloc(sizeof(char) * (strlen(carg) + 1));
             strcpy(nargv[nargc], argv[i]);
             nargc++;
         }

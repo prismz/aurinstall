@@ -45,7 +45,7 @@ pretty_print(char* str_, int indent)
 
     int termwidth = w.ws_col - indent;
 
-    char* str = smalloc(strlen(str_) + 1, "str - pretty_print() - util.c");
+    char* str = smalloc(sizeof(char) * (strlen(str_) + 1));
     strcpy(str, str_);
 
     char* words[strlen(str) + 1];
@@ -53,7 +53,7 @@ pretty_print(char* str_, int indent)
 
     int wordc;
     for (wordc = 0; ptr != NULL; wordc++) {
-        words[wordc] = smalloc(strlen(ptr) + 1, "words[wordc] - pretty_print() - util.c");
+        words[wordc] = smalloc(sizeof(char) * (strlen(ptr) + 1));
         strcpy(words[wordc], ptr);
         words[wordc + 1] = NULL;
         ptr = strtok(NULL, " ");
@@ -106,7 +106,7 @@ dir_is_empty(char* path)
 char*
 get_homedir(void)
 {
-    char* path = smalloc(256, "path - get_homedir() - util.c");
+    char* path = smalloc(sizeof(char) * 256);
     uid_t uid = getuid();
     struct passwd* pw = getpwuid(uid);
     if (pw == NULL) {

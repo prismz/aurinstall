@@ -30,7 +30,7 @@ void
 init_string(struct curl_str *s)
 {
     s->len = 0;
-    s->ptr = smalloc(s->len+1, "s->ptr - init_string() - requests.c");
+    s->ptr = smalloc(sizeof(char) * (s->len+1));
     s->ptr[0] = '\0';
 }
 
