@@ -58,6 +58,7 @@ parse_api_results(struct curl_str* cs)
             ar->error = smalloc(sizeof(char) * (strlen(err) + 1));
             strcpy(ar->error, err);
         }
+        // json_object_put(jobj_err);
     }
 
     json_object_object_get_ex(jobj_results, "resultcount", &jobj_resultcount);
@@ -65,6 +66,7 @@ parse_api_results(struct curl_str* cs)
 
     ar->resultcount = json_object_get_int(jobj_resultcount);
 
+    // json_object_put(jobj_results);
     return ar;
 }
 
@@ -130,6 +132,7 @@ free_package_data(struct package_data* pi)
         sfree(pi->ver);
     if (pi->ood != NULL)
         sfree(pi->ood);
+    sfree(pi);
 }
 
 void
@@ -137,6 +140,8 @@ free_api_results(struct api_results* ar)
 {
     sfree((char*)ar->type);
     sfree((char*)ar->error);
+    // json_object_put(ar->results);
+    sfree(ar);
 }
 
 int

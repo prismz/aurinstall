@@ -28,7 +28,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <sys/stat.h>
 
 void
 usage(void)
@@ -40,8 +42,8 @@ usage(void)
    printf("  update               update currently installed AUR packages.\n");
    printf("  remove               remove one or more packages.\n");
    printf("  clean                clean the cache of downloaded packages.\n");
-   printf("  help/usage           print this message and exit\n");
-   printf("  version              print version and copyright info and exit\n\n");
+   printf("  help/usage           print this message and exit.\n");
+   printf("  version              print version and copyright info and exit.\n\n");
    printf("https://github.com/prismz/aurinstall\n");
    exit(0);
 }
@@ -65,22 +67,36 @@ main(int argc, char** argv)
 {
     int arg_c;
     char** args = parse_args(argc, argv, &arg_c);
-    if (arg_c < 1)
+    if (arg_c < 1) {
+        for (int i = 0; i < arg_c; i++)
+            sfree(args[i]);
+        sfree(args);
         usage();
+    }
 
     int oper = determine_operation(args[0]);
-    if (oper == -1)
+    if (oper == -1) {
+        for (int i = 0; i < arg_c; i++)
+            sfree(args[i]);
+        sfree(args);
         die(stderr, "invalid operation.", 1);
+    }
 
     if (arg_c == 1 && 
         oper != oper_update && oper != oper_clean && 
-        oper != oper_version && oper != oper_usage)
+        oper != oper_version && oper != oper_usage) {
+
+        for (int i = 0; i < arg_c; i++)
+            sfree(args[i]);
+        sfree(args);
         die(stderr, "please provide an argument for the operation.", 1);
+        }
 
     char* home_folder = get_homedir();
     char* cache_path = smalloc(sizeof(char) * 256);
     snprintf(cache_path, 256, "%s/.cache/aurinstall", home_folder);
     sfree(home_folder);
+    mkdir(cache_path, 0777);  /* create cache directory if it does not exist */
 
     int done_updating = 0;
     char* pkg_str;

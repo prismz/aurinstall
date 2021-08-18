@@ -34,5 +34,6 @@ void pretty_print(char* str_, int indent);
 int dir_is_empty(char* path);
 char* get_homedir(void);
 void right_pad_print_str(char* str, int max_len, int extra);
+int snsystem(size_t size, char* format, ...);
 
 #endif

@@ -44,9 +44,13 @@ srealloc(void* ptr, size_t size)
     return mem;
 }
 
-/* old debug function, kept in for consistency */
+/* 
+ * old debug function, kept in for consistency 
+ * calls free() on ptr.
+ */
 void
 sfree(void* ptr)
 {
-    free(ptr);
+    if (ptr != NULL)
+        free(ptr);
 }

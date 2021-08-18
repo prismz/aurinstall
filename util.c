@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2021 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -67,6 +68,7 @@ pretty_print(char* str_, int indent)
         char* word = words[i];
         printf("%s ", word);
         j += strlen(word) + 1;
+        sfree(words[i]);
 
         if (i == wordc - 1)
             break;
@@ -77,7 +79,6 @@ pretty_print(char* str_, int indent)
                 printf(" ");
             j = 0;
         }
-        sfree(words[i]);
     }
     sfree(str);
 
@@ -124,4 +125,22 @@ right_pad_print_str(char* str, int max_len, int extra)
     printf("%s", str);
     for (int i = max_len - strlen(str) + extra; i >= 0; i--)
         printf(" ");
+}
+
+int
+snsystem(size_t size, char* format, ...)
+{
+    va_list argl;
+    va_start(argl, format);
+
+    char* command = smalloc(sizeof(char) * size);
+
+    vsnprintf(command, size, format, argl);
+
+    va_end(argl);
+
+    int ret = system(command);
+    sfree(command);
+
+    return ret;
 }
