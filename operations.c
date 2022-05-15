@@ -42,7 +42,7 @@
  * call_again is a pointer to an integer which will be set to 1 
  * if there are more than 150 packages or if the length of the request 
  * to be sent to the AUR is too long, meaning the external function will have to
- * be called again to complete it's work.
+ * be called again to complete its work.
  *
  * npkg is the only required argument. 
  * All others are optional and can be set to NULL.
