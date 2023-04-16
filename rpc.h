@@ -14,37 +14,39 @@
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
  * 
- * Copyright (C) 2021 Hasan Zahra
+ * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
 
 #ifndef RPC_H
 #define RPC_H
 
-#include "requests.h"
+#include "json.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <json-c/json.h>
+typedef enum {
+        rpc_search,
+        rpc_multiinfo,
+        rpc_error,
+} rpc_result_t;
 
-struct api_results {
-    int resultcount;
-    struct json_object* results;
-    char* type;
-    char* error;
+struct rpc_data {
+        size_t resultcount;
+        rpc_result_t type;
+        char *error;
+        struct json *results;
+        struct json *raw_json;
 };
 
-struct package_data {
-    char* name;
-    char* desc;
-    char* ver;
-    char* ood;
+struct package {
+        char *name;
+        char *desc;
+        char *version;
+        long outofdate;
 };
 
-struct api_results* parse_api_results(struct curl_str* cs);
-struct package_data* parse_package_data(struct json_object* result);
-void free_package_data(struct package_data* pi);
-void free_api_results(struct api_results* ar);
-int pkg_array_contains(struct package_data** haystack, size_t n, char* needle);
+struct rpc_data *make_rpc_request(char *url);
+void free_rpc_data(struct rpc_data *data);
+struct package *parse_package_json(struct json *j);
+void free_package_data(struct package *p);
 
-#endif
+#endif  /* RPC_H */

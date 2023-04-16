@@ -1,0 +1,60 @@
+                  _           _        _ _ 
+  __ _ _   _ _ __(_)_ __  ___| |_ __ _| | |
+ / _` | | | | '__| | '_ \/ __| __/ _` | | |
+| (_| | |_| | |  | | | | \__ \ || (_| | | |
+ \__,_|\__,_|_|  |_|_| |_|___/\__\__,_|_|_|
+-------------------------------------------
+
+Aurinstall is an incredibly simple AUR helper written in C.
+It only supports installing AUR packages, so use pacman for regular package
+operations.
+
+This program is designed to have very few dependencies - only libcurl (for API
+requests). JSON parsing is done with my own json library:
+        https://github.com/prismz/json
+
+Only gnupg and git are required for importing PGP keys and for cloning packages.
+
+Due to the way makepkg works, if you do not have sudo installed, you must either
+create a symlink to a similar program (doas) or type in your password multiple
+times. This can get annoying, so I advise creating a symlink.
+
+Installation
+------------
+To install the program, run `make install` as root.
+
+You need gnupg and git for installing packages, and gcc and libcurl for 
+compiling aurinstall.
+
+Removal
+-------
+To remove the program, run `make uninstall` as root.
+
+Usage
+-----
+To install packages:
+
+        aurinstall [package1] [package2] [...]
+
+To search:
+        
+        aurinstall --search [package1] [...]
+
+        You can narrow your search with multiple searchterms. For example,
+                aurinstall --search chromium ungoogled
+        will first search for chromium, and then filter results for with
+        "ungoogled" in the name.
+
+Removing packages:
+        
+        aurinstall --remove [package1] [package2] [...]
+
+Updating:
+        
+        aurinstall --update
+
+Cleaning cache:
+        
+        aurinstall --clean
+
+        The cache is located at ~/.cache/aurinstall.

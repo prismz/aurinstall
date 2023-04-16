@@ -14,35 +14,46 @@
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
  * 
- * Copyright (C) 2021 Hasan Zahra
+ * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
 
-#ifndef OPERATIONS_H
-#define OPERATIONS_H
+#include "alloc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
-enum operation {
-    oper_install,
-    oper_search,
-    oper_update,
-    oper_clean,
-    oper_remove,
-    oper_version,
-    oper_usage
-};
+void *safe_malloc(size_t s)
+{
+        void *mem = malloc(s);
+        assert(mem != NULL);
+        return mem;
+}
 
-struct package_data**
-get_installed_packages(int* npkg, int* max_name_len,
-                       int* max_ver_len, char* information_request,
-                       size_t* request_len, int* call_again);
-                       
-void search_aur(char** searchterms, size_t searchterm_count);
-void install_aur_package(char* name, char* cache_dir);
-int update_installed_packages(char* cache_dir);
-void clean_package_cache(char* cache_dir);
-void remove_packages(char* packages);
+void *safe_calloc(int n, size_t s)
+{
+        void *mem = calloc(n, s);
+        assert(mem != NULL);
+        return mem;
+}
 
-#endif
+void *safe_realloc(void *ptr, size_t s)
+{
+        void *mem = realloc(ptr, s);
+        assert(mem != NULL);
+        return mem;
+}
+
+char *safe_strdup(char *str)
+{
+        if (str == NULL)
+                return NULL;
+
+        size_t len = strlen(str);
+        char *mem = safe_malloc(sizeof(char) * (len + 1));
+        strcpy(mem, str);
+
+        return mem;
+}

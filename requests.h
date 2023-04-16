@@ -14,23 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
  * 
- * Copyright (C) 2021 Hasan Zahra
+ * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
 
 #ifndef REQUESTS_H
 #define REQUESTS_H
 
-#include <stdio.h>
 #include <stdlib.h>
 
 struct curl_str {
-    char* ptr;
-    size_t len;
+        char *ptr;
+        size_t len;
 };
 
 void init_string(struct curl_str *s);
 size_t write_func(void *ptr, size_t size, size_t nmemb, struct curl_str *s);
-struct curl_str requests_get(char* url);
+char *requests_get(char *url);
 
-#endif
+#endif  /* REQUESTS_H */

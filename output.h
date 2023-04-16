@@ -14,17 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
  * 
- * Copyright (C) 2021 Hasan Zahra
+ * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
 
-#ifndef AURINSTALL_H
-#define AURINSTALL_H
+#ifndef OUTPUT_H
+#define OUTPUT_H
 
-#define VERSION "v1.1"
+#include <stdbool.h>
 
-void usage(void);
-void version(void);
-int main(int argc, char** argv);
+#define BOLD "\033[1m"
+#define RED "\033[91m"
+#define GREEN "\033[92m"
+#define BLUE "\033[94m"
+#define ENDC "\033[0m"
+
+void indent_print(char *str, int indent);
+bool stdout_is_tty(void);
 
 #endif

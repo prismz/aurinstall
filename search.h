@@ -13,44 +13,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- *
- * Copyright (C) 2021 Hasan Zahra
+ * 
+ * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
 
-#include "mem.h"
-#include "util.h"
+#ifndef SEARCH_H
+#define SEARCH_H
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdbool.h>
 
-void*
-smalloc(size_t size)
-{
-    void* mem = malloc(size);
-    if (mem == NULL)
-        die(stderr, "error: out of memory.", EXIT_FAILURE);
+void print_search_result(bool istty, char *name, 
+                char *desc, char *ver, int ood, bool installed);
+int search_aur(int n, char **terms);
 
-    return mem;
-}
-
-void*
-srealloc(void* ptr, size_t size)
-{
-    void* mem = realloc(ptr, size);
-    if (mem == NULL)
-        die(stderr, "error: could not resize memory block.", EXIT_FAILURE);
-
-    return mem;
-}
-
-/* 
- * old debug function, kept in for consistency 
- * calls free() on ptr.
- */
-void
-sfree(void* ptr)
-{
-    if (ptr != NULL)
-        free(ptr);
-}
+#endif  /* SEARCH_H */

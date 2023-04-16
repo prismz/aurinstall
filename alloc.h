@@ -14,17 +14,18 @@
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
  * 
- * Copyright (C) 2021 Hasan Zahra
+ * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
 
-#ifndef MEM_H
-#define MEM_H
+#ifndef ALLOC_H
+#define ALLOC_H
 
-#include <stdio.h>
+#include <stdlib.h>
 
-void* smalloc(size_t size);
-void* srealloc(void* ptr, size_t size);
-void sfree(void* ptr);
+void *safe_malloc(size_t s);
+void *safe_calloc(int n, size_t s);
+void *safe_realloc(void *ptr, size_t s);
+char *safe_strdup(char *str);
 
-#endif
+#endif  /* ALLOC_H */
