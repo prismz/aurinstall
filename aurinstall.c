@@ -70,7 +70,17 @@ void usage(void)
 
 void version(void)
 {
-        printf("aurinstall version %s\n", VERSION);
+        printf("aurinstall %s\n", VERSION);
+
+        printf("Copyright (C) 2023 Hasan Zahra\n");
+        printf("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\n");
+        printf("This is free software: you are free to change and redistribute it.\n");
+        printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
+
+        printf("Written by Hasan Zahra.\n");
+        printf("https://github.com/prismz/aurinstall\n");
+
+        exit(0);
 }
 
 int main(int argc, char **argv)
