@@ -353,7 +353,7 @@ int remove_packages(int n, char **pkgs)
 {
         size_t curr_len = 0;
         size_t capacity = 4096;
-        char *str = safe_malloc(sizeof(char) * capacity);
+        char *str = safe_calloc(1, sizeof(char) * capacity);
         for (int i = 0; i < n; i++) {
                 char *pkg = pkgs[i];
                 size_t len = strlen(pkg);
@@ -365,7 +365,8 @@ int remove_packages(int n, char **pkgs)
 
                 strcat(str, pkg);
                 strcat(str, " ");
+                curr_len += len;
         }
 
-        return snsystem("pacman -R %s", 32 + curr_len, str);
+        return snsystem("pacman -R %s", 32 + strlen(str), str);
 }
