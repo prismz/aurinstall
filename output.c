@@ -134,7 +134,7 @@ void print_diff(char *a, char *b)
         size_t longest = (l1 > l2) ? l1 : l2;
         char *longest_str = (l1 > l2) ? a : b;
 
-        printf("%s%s%s: ", GREEN, a, ENDC);
+        printf("%s%s%s -> ", GREEN, a, ENDC);
         printf("%s", GREEN);
 
         bool switched = false;
