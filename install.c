@@ -20,6 +20,7 @@
 
 #include "install.h"
 #include "requests.h"
+#include "output.h"
 #include "alloc.h"
 #include "util.h"
 #include "rpc.h"
@@ -296,11 +297,14 @@ int update_packages(char *cache_path)
                         update_queue[update_queue_i++] = safe_strdup(name);
 
                         char name_fmt[1024];
-                        snprintf(name_fmt, 1024, "%%-%zus: ", 
-                                        largest_package_name_length + 3);
+                        snprintf(name_fmt, 1024, "%s%%-%zus%s: ", 
+                                        BLUE, largest_package_name_length + 3,
+                                        ENDC);
 
                         printf(name_fmt, name);
-                        printf("%s -> %s\n", installed_version, new_version);
+
+                        print_diff(installed_version, new_version);
+                        printf("\n");
 
                         if (update_queue_i + 1 > 1024) {
                                 repeat = 1;

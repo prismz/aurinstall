@@ -125,3 +125,28 @@ bool stdout_is_tty(void)
 {
         return isatty(STDOUT_FILENO);
 }
+
+void print_diff(char *a, char *b)
+{
+        size_t l1 = strlen(a);
+        size_t l2 = strlen(b);
+
+        size_t longest = (l1 > l2) ? l1 : l2;
+        char *longest_str = (l1 > l2) ? a : b;
+
+        printf("%s%s%s: ", GREEN, a, ENDC);
+        printf("%s", GREEN);
+
+        bool switched = false;
+        
+        for (size_t i = 0; i < longest; i++) {
+                if (a[i] != b[i] && !switched) {
+                        switched = true;
+                        printf("%s", ENDC);
+                        printf("%s", RED);
+                }
+                printf("%c", longest_str[i]);
+        }
+        
+        printf("%s", ENDC);
+}

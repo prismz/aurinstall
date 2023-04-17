@@ -31,5 +31,6 @@
 
 void indent_print(char *str, int indent);
 bool stdout_is_tty(void);
+void print_diff(char *a, char *b);
 
 #endif
