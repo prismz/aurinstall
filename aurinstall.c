@@ -140,7 +140,7 @@ int main(int argc, char **argv)
         } 
 
         if  (strcmp(operation, "--help") == 0 
-                        || strcmp(operation, "usage") == 0) {
+                        || strcmp(operation, "--usage") == 0) {
                 usage();
                 return 0;
         }
