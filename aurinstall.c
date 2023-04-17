@@ -104,8 +104,17 @@ int main(int argc, char **argv)
         char *operation = argv[1];
         
         if (strcmp(operation, "--search") == 0) {
-                if (search_aur(parameters_i, parameters)) {
+                if (parameters_i == 0) {
+                        fprintf(stderr, 
+                                "please provide at least one searchterm.\n");
+                        return 1;
 
+                }
+
+                if (search_aur(parameters_i, parameters)) {
+                        fprintf(stderr, "search failed. ");
+                        fprintf(stderr, "Maybe your terms were too broad?\n");
+                        return 1;
                 }
 
                 return 0;

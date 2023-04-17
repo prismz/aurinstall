@@ -87,7 +87,6 @@ int search_aur(int n, char **terms)
 
        
         if (data->type != rpc_search) {
-                fprintf(stderr, "error: search failed.\n");
                 return 1;
         }
 
