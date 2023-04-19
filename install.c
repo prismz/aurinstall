@@ -96,14 +96,13 @@ int install_package(char *name, char *cache_path)
         );
 
         api_json_result = make_rpc_request(api_info_str);
+        free(api_info_str);
 
         if (api_json_result->resultcount != 1) {
                 fprintf(stderr, "error installing package %s.\n", name);
                 rc = 1;
                 goto end;
         }
-
-        free(api_info_str);
 
         pkg_json = json_get_array_item(api_json_result->results, 0);
         pkg_info = parse_package_json(pkg_json);

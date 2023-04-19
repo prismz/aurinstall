@@ -31,6 +31,44 @@
 #include <string.h>
 #include <stdbool.h>
 
+static char *levenshtein_cmp_str;
+
+/* https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#C */
+int levenshtein(char *s1, char *s2) {
+        unsigned int s1len, s2len, x, y, lastdiag, olddiag;
+        s1len = strlen(s1);
+        s2len = strlen(s2);
+        unsigned int column[s1len + 1];
+        for (y = 1; y <= s1len; y++)
+                column[y] = y;
+        for (x = 1; x <= s2len; x++) {
+                column[0] = x;
+                for (y = 1, lastdiag = x - 1; y <= s1len; y++) {
+                        olddiag = column[y];
+                        column[y] = MIN3(column[y] + 1, column[y - 1] + 1, 
+                                lastdiag + (s1[y-1] == s2[x - 1] ? 0 : 1));
+                        lastdiag = olddiag;
+                }
+        }
+
+        return column[s1len];
+}
+
+int package_qsort_levenshtein(const void *one, const void *two)
+{
+        struct json *pkg_one = (struct json *)*(const struct json **)one;
+        struct json *pkg_two = (struct json *)*(const struct json **)two;
+
+        char *str = levenshtein_cmp_str;
+
+        char *one_str = json_get_dict_string(pkg_one, "Name"); 
+        char *two_str = json_get_dict_string(pkg_two, "Name"); 
+
+        int diff = levenshtein(one_str, str) - levenshtein(two_str, str);
+
+        return diff;
+}
+
 void print_search_result(bool istty, char *name, char *desc, 
                 char *ver, int ood, bool installed)
 {
@@ -92,6 +130,14 @@ int search_aur(int n, char **terms)
 
         bool istty = stdout_is_tty();
 
+        /* 
+         * We sort the results using the Levenshtein sorting algorithm.
+         * Create an array to store all results to sort later.
+         */
+        int packages_i = 0;
+        struct json **packages = safe_calloc(data->resultcount, 
+                        sizeof(struct json));
+
         for (size_t i = 0; i < data->resultcount; i++) {
                 struct json *pkg = json_get_array_item(data->results, i);
                 char *name = json_get_dict_string(pkg, "Name");
@@ -103,22 +149,35 @@ int search_aur(int n, char **terms)
                         }
                 }
 
-                if (valid) {
-                        char *desc = json_get_dict_string(pkg, "Description");
-                        char *ver = json_get_dict_string(pkg, "Version");
-                        int ood = json_get_dict_number(pkg, "OutOfDate");
-                        
-                        bool is_installed = false;
-                        if (hashmap_index(installed, name) != NULL) {
-                                is_installed = true;
-                        }
-                        
-                        print_search_result(istty, name, desc, ver, ood,
-                                        is_installed);
-                }
+                if (valid)
+                        packages[packages_i++] = pkg;
         }
 
+        levenshtein_cmp_str = terms[0];
+        qsort(packages, packages_i, sizeof(struct json *), 
+                        package_qsort_levenshtein);
+
+        for (int i = packages_i - 1; i >= 0; i--) {
+                struct json *pkg = packages[i];
+
+                char *name = json_get_dict_string(pkg, "Name");
+                char *desc = json_get_dict_string(pkg, "Description");
+                char *ver = json_get_dict_string(pkg, "Version");
+                int ood = json_get_dict_number(pkg, "OutOfDate");
+                
+                bool is_installed = false;
+                if (hashmap_index(installed, name) != NULL) {
+                        is_installed = true;
+                }
+                
+                print_search_result(istty, name, desc, ver, ood,
+                                is_installed);
+
+        }
+
+        free(packages);
         free_rpc_data(data);
+        free_hashmap(installed);
 
         return 0;
 }
