@@ -296,9 +296,9 @@ int update_packages(char *cache_path)
                         update_queue[update_queue_i++] = safe_strdup(name);
 
                         char name_fmt[1024];
-                        snprintf(name_fmt, 1024, "%s%%-%zus%s: ", 
-                                        BLUE, largest_package_name_length + 3,
-                                        ENDC);
+                        snprintf(name_fmt, 1024, "%s%s%%-%zus%s: ", 
+                                        BLUE, BOLD, 
+                                        largest_package_name_length + 3, ENDC);
 
                         printf(name_fmt, name);
 
