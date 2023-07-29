@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -67,7 +67,7 @@ int import_pgp_keys(char *path)
 
                 char *key = stripped + i;
 
-                if (snsystem("gpg --recv-keys %s", 
+                if (snsystem("gpg --recv-keys %s",
                                         32 + strlen(key), key) != 0) {
                         fprintf(stderr, "failed to import key: %s\n", key);
                         return 1;
@@ -123,14 +123,14 @@ int install_package(char *name, char *cache_path)
         if (!dir_is_empty(dest_path)) {
                 char *prompt = "Existing package data found. Rebuild?";
                 should_clone = yesno_prompt(prompt, false);
-                
+
                 if (should_clone)
                         snsystem("rm -rfv %s", PATH_MAX + 16, dest_path);
         }
 
         if (should_clone) {
                 char *fmt = "git clone https://aur.archlinux.org/%s.git %s";
-                int git_clone_r = snsystem(fmt, 
+                int git_clone_r = snsystem(fmt,
                                 strlen(pkg_info->name) + strlen(dest_path) + 64,
                                 pkg_info->name, dest_path
                 );
@@ -150,7 +150,7 @@ int install_package(char *name, char *cache_path)
 
         char *makepkg_fmt = "cd %s && makepkg -si";
         int makepkg_r = snsystem(makepkg_fmt, PATH_MAX + 128, dest_path);
-        
+
         if (makepkg_r) {
                 fprintf(stderr, "makepkg failed.\n");
                 rc = 1;
@@ -178,7 +178,7 @@ HashMap *get_installed_packages(void)
                 size_t len = strlen(line_buf);
                 line_buf[len - 1] = '\0';
                 len--;
-                
+
                 int splitspace_idx = -1;
                 for (size_t i = 0; i < len; i++) {
                         if (line_buf[i] == ' ') {
@@ -234,7 +234,7 @@ int update_packages(char *cache_path)
         if (installed_packages->stored == 0)
                 return 0;
 
-        /* 
+        /*
          * build one long api request - this is tedious, but works better for
          * not DDoS'ing the AUR.
          */
@@ -278,7 +278,7 @@ int update_packages(char *cache_path)
         size_t update_queue_i = 0;
         char *update_queue[1024];
 
-        printf("The following have updates:\n"); 
+        printf("The following have updates:\n");
         /* parse the results */
         struct json *results = data->results;
         for (size_t i = 0; i < data->resultcount; i++) {
@@ -296,8 +296,8 @@ int update_packages(char *cache_path)
                         update_queue[update_queue_i++] = safe_strdup(name);
 
                         char name_fmt[1024];
-                        snprintf(name_fmt, 1024, "%s%s%%-%zus%s: ", 
-                                        BLUE, BOLD, 
+                        snprintf(name_fmt, 1024, "%s%s%%-%zus%s: ",
+                                        BLUE, BOLD,
                                         largest_package_name_length + 3, ENDC);
 
                         printf(name_fmt, name);
@@ -313,6 +313,11 @@ int update_packages(char *cache_path)
                 }
 
                 free_package_data(pkg);
+        }
+
+        if (update_queue_i == 0) {
+                printf("no updates. exiting.\n");
+                goto end;
         }
 
         bool should_update = yesno_prompt("update?", true);
