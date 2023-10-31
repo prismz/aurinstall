@@ -148,7 +148,7 @@ int install_package(char *name, char *cache_path)
                 goto end;
         }
 
-        char *makepkg_fmt = "cd %s && makepkg -si";
+        char *makepkg_fmt = "cd %s && makepkg --noconfirm -si";
         int makepkg_r = snsystem(makepkg_fmt, PATH_MAX + 128, dest_path);
 
         if (makepkg_r) {
@@ -214,6 +214,12 @@ HashMap *get_installed_packages(void)
 
                         return NULL;
                 }
+        }
+
+        if (installed_packages->stored == 0) {
+                free_hashmap(installed_packages); 
+
+                return NULL;
         }
 
         free(line_buf);
