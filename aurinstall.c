@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -40,11 +40,11 @@ void init(void)
         char *userhome = get_user_home();
         user_cache_path = safe_malloc(sizeof(char) * PATH_MAX);
         snprintf(user_cache_path, PATH_MAX, "%s/.cache/aurinstall", userhome);
-       
+
         if (!dir_exists(user_cache_path)) {
                 /* remove just in case the path exists but is not a folder. */
                 snsystem("rm -rf %s", PATH_MAX + 32, user_cache_path);
-                printf("Cache dir does not exist. Creating one at %s.\n", 
+                printf("Cache dir does not exist. Creating one at %s.\n",
                                 user_cache_path);
                 snsystem("mkdir -p \"%s\"", PATH_MAX + 32, user_cache_path);
         }
@@ -102,10 +102,10 @@ int main(int argc, char **argv)
         }
 
         char *operation = argv[1];
-        
+
         if (strcmp(operation, "--search") == 0) {
                 if (parameters_i == 0) {
-                        fprintf(stderr, 
+                        fprintf(stderr,
                                 "please provide at least one searchterm.\n");
                         return 1;
 
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 
                 return 0;
         }
-        
+
         if (strcmp(operation, "--update") == 0) {
                 if (update_packages(user_cache_path)) {
                         fprintf(stderr, "failed to update packages.\n");
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 
                 return 0;
 
-        } 
+        }
 
         if (strcmp(operation, "--remove") == 0) {
                 if (remove_packages(parameters_i, parameters)) {
@@ -137,7 +137,7 @@ int main(int argc, char **argv)
                 }
 
                 return 0;
-        } 
+        }
 
         if (strcmp(operation, "--clean") == 0) {
                 if (clean_cache(user_cache_path)) {
@@ -146,9 +146,9 @@ int main(int argc, char **argv)
                 }
 
                 return 0;
-        } 
+        }
 
-        if  (strcmp(operation, "--help") == 0 
+        if  (strcmp(operation, "--help") == 0
                         || strcmp(operation, "--usage") == 0) {
                 usage();
                 return 0;
@@ -166,6 +166,7 @@ int main(int argc, char **argv)
 
         for (int i = 0; i < parameters_i; i++) {
                 char *param = parameters[i];
-                install_package(param, user_cache_path);
+                if (install_package(param, user_cache_path))
+                        return 1;
         }
 }

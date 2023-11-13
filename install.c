@@ -87,6 +87,7 @@ int install_package(char *name, char *cache_path)
         struct rpc_data *api_json_result = NULL;
         struct json *pkg_json = NULL;
         struct package *pkg_info = NULL;
+        char *dest_path = NULL;
 
         size_t api_info_str_len = strlen(name) + 128;
         char *api_info_str = safe_malloc(sizeof(char) * api_info_str_len);
@@ -114,7 +115,7 @@ int install_package(char *name, char *cache_path)
                         goto end;
         }
 
-        char *dest_path = safe_malloc(sizeof(char) * PATH_MAX);
+        dest_path = safe_malloc(sizeof(char) * PATH_MAX);
         snprintf(dest_path, PATH_MAX, "%s/%s", cache_path, name);
 
         printf("installing to directory %s\n", dest_path);
@@ -217,7 +218,7 @@ HashMap *get_installed_packages(void)
         }
 
         if (installed_packages->stored == 0) {
-                free_hashmap(installed_packages); 
+                free_hashmap(installed_packages);
 
                 return NULL;
         }
