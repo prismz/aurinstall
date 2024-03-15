@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -45,7 +45,7 @@ int levenshtein(char *s1, char *s2) {
                 column[0] = x;
                 for (y = 1, lastdiag = x - 1; y <= s1len; y++) {
                         olddiag = column[y];
-                        column[y] = MIN3(column[y] + 1, column[y - 1] + 1, 
+                        column[y] = MIN3(column[y] + 1, column[y - 1] + 1,
                                 lastdiag + (s1[y-1] == s2[x - 1] ? 0 : 1));
                         lastdiag = olddiag;
                 }
@@ -61,15 +61,15 @@ int package_qsort_levenshtein(const void *one, const void *two)
 
         char *str = levenshtein_cmp_str;
 
-        char *one_str = json_get_dict_string(pkg_one, "Name"); 
-        char *two_str = json_get_dict_string(pkg_two, "Name"); 
+        char *one_str = json_get_dict_string(pkg_one, "Name");
+        char *two_str = json_get_dict_string(pkg_two, "Name");
 
         int diff = levenshtein(one_str, str) - levenshtein(two_str, str);
 
         return diff;
 }
 
-void print_search_result(bool istty, char *name, char *desc, 
+void print_search_result(bool istty, char *name, char *desc,
                 char *ver, int ood, bool installed)
 {
         if (!istty) {
@@ -79,7 +79,7 @@ void print_search_result(bool istty, char *name, char *desc,
 
                 if (installed)
                         printf(" [INSTALLED]");
-                
+
                 printf("\n");
                 if (desc != NULL)
                         printf("    %s\n", desc);
@@ -87,7 +87,7 @@ void print_search_result(bool istty, char *name, char *desc,
                 return;
         }
 
-        printf("%s%saur/%s%s%s %s%s%s%s", BOLD, RED, ENDC, name, ENDC, ENDC, 
+        printf("%s%saur/%s%s%s %s%s%s%s", BOLD, RED, ENDC, name, ENDC, ENDC,
                         GREEN, ver, ENDC);
         if (ood)
                 printf(" %s(OUT OF DATE)%s", RED, ENDC);
@@ -106,36 +106,33 @@ int search_aur(int n, char **terms)
                 return 1;
 
         HashMap *installed = get_installed_packages();
-        if (installed == NULL) {
-                return 1;        
-        }
 
         char *url = safe_malloc(1024);
-        snprintf(url, 1024, 
+        snprintf(url, 1024,
                         "https://aur.archlinux.org/rpc/?v=5&type=search&arg=%s",
                         terms[0]);
 
         struct rpc_data *data = make_rpc_request(url);
-        
+
         free(url);
 
         if (data == NULL) {
                 return 1;
         }
 
-       
+
         if (data->type != rpc_search) {
                 return 1;
         }
 
         bool istty = stdout_is_tty();
 
-        /* 
+        /*
          * We sort the results using the Levenshtein sorting algorithm.
          * Create an array to store all results to sort later.
          */
         int packages_i = 0;
-        struct json **packages = safe_calloc(data->resultcount, 
+        struct json **packages = safe_calloc(data->resultcount,
                         sizeof(struct json));
 
         for (size_t i = 0; i < data->resultcount; i++) {
@@ -154,7 +151,7 @@ int search_aur(int n, char **terms)
         }
 
         levenshtein_cmp_str = terms[0];
-        qsort(packages, packages_i, sizeof(struct json *), 
+        qsort(packages, packages_i, sizeof(struct json *),
                         package_qsort_levenshtein);
 
         for (int i = packages_i - 1; i >= 0; i--) {
@@ -164,12 +161,12 @@ int search_aur(int n, char **terms)
                 char *desc = json_get_dict_string(pkg, "Description");
                 char *ver = json_get_dict_string(pkg, "Version");
                 int ood = json_get_dict_number(pkg, "OutOfDate");
-                
+
                 bool is_installed = false;
-                if (hashmap_index(installed, name) != NULL) {
+                if (installed && hashmap_index(installed, name) != NULL) {
                         is_installed = true;
                 }
-                
+
                 print_search_result(istty, name, desc, ver, ood,
                                 is_installed);
 
