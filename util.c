@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -68,12 +68,14 @@ bool yesno_prompt(char *prompt, bool default_answer)
         for (;;) {
                 printf("%s [%c/%c] ", prompt, yc, nc);
                 fgets(buf, 1024, stdin);
-                if (strcmp(buf, "y\n") == 0 || strcmp(buf, "yes\n") == 0) {
+                if (strcmp(buf, "y\n") == 0 || strcmp(buf, "yes\n") == 0
+                                || strcmp(buf, "Y\n") == 0) {
                         free(buf);
                         return true;
                 }
 
-                if (strcmp(buf, "n\n") == 0 || strcmp(buf, "no\n") == 0) {
+                if (strcmp(buf, "n\n") == 0 || strcmp(buf, "no\n") == 0
+                                || strcmp(buf, "N\n") == 0) {
                         free(buf);
                         return false;
                 }
@@ -90,7 +92,7 @@ bool yesno_prompt(char *prompt, bool default_answer)
 int snsystem(char *fmt, size_t size, ...)
 {
         char *buf = safe_malloc(sizeof(char) * size);
-        
+
         va_list ap;
         va_start(ap, size);
 
