@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -40,14 +40,14 @@ void indent_print(char *str, int indent)
                 for (int i = 0; i < indent; i++)
                         printf(" ");
                 printf("%s\n", str);
-                
+
                 return;
         }
 
         size_t words_capacity = 128;
         size_t words_idx = 0;
         char **words = safe_malloc(sizeof(char *) * words_capacity);
-        
+
         size_t current_word_capacity = 256;
         size_t current_word_idx = 0;
         char *current_word = safe_malloc(sizeof(char) * current_word_capacity);
@@ -61,7 +61,7 @@ void indent_print(char *str, int indent)
 
                 if (current_word_idx + 2 > current_word_capacity) {
                         current_word_capacity += 32;
-                        current_word = realloc(current_word, 
+                        current_word = realloc(current_word,
                                         sizeof(char) * current_word_capacity);
                 }
 
@@ -72,14 +72,14 @@ space:
                 if ((isspace(c) || (i == len - 1)) && current_word_idx != 0) {
                         if (words_idx + 1 > words_capacity) {
                                 words_capacity += 32;
-                                words = safe_realloc(words, 
+                                words = safe_realloc(words,
                                                sizeof(char *) * words_capacity);
                         }
 
                         words[words_idx++] = safe_strdup(current_word);
                         current_word_capacity = 256;
                         current_word_idx = 0;
-                        current_word = safe_realloc(current_word, 
+                        current_word = safe_realloc(current_word,
                                         sizeof(char) * current_word_capacity);
                         bzero(current_word, current_word_capacity);
 
@@ -132,21 +132,20 @@ void print_diff(char *a, char *b)
         size_t l2 = strlen(b);
 
         size_t longest = (l1 > l2) ? l1 : l2;
-        char *longest_str = (l1 > l2) ? a : b;
 
         printf("%s%s%s -> ", RED, a, ENDC);
         printf("%s", RED);
 
         bool switched = false;
-        
+
         for (size_t i = 0; i < longest; i++) {
                 if (a[i] != b[i] && !switched) {
                         switched = true;
                         printf("%s", ENDC);
                         printf("%s", GREEN);
                 }
-                printf("%c", longest_str[i]);
+                printf("%c", b[i]);
         }
-        
+
         printf("%s", ENDC);
 }
