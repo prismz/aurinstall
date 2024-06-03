@@ -19,6 +19,7 @@
  */
 
 #include "hashmap.h"
+#include "alloc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +31,7 @@
 HMItem *new_item(char *key, void *val,
                 void (*k_free_func)(void *), void (*v_free_func)(void *))
 {
-	HMItem *item = calloc(1, sizeof(*item));
+	HMItem *item = safe_calloc(1, sizeof(*item));
         if (item == NULL)
                 return NULL;
 
@@ -57,13 +58,13 @@ void free_item(HMItem *item)
 
 HashMap *new_hashmap(size_t capacity)
 {
-	HashMap *map = calloc(1, sizeof(*map));
+	HashMap *map = safe_calloc(1, sizeof(*map));
         if (map == NULL)
                 return NULL;
 
 	map->can_store = capacity;
 	map->stored = 0;
-	map->items = calloc(map->can_store, sizeof(HMItem *));
+	map->items = safe_calloc(map->can_store, sizeof(HMItem *));
         if (map->items == NULL) {
                 free(map);
                 return NULL;
@@ -91,7 +92,7 @@ int check_hashmap_capacity(HashMap *map, size_t n)
 
         int ns_a = ((n + 8) > 32) ? (n + 8) : 32;
 	size_t new_size = map->can_store + ns_a;
-	HMItem **new = calloc(new_size, sizeof(HMItem *));
+	HMItem **new = safe_calloc(new_size, sizeof(HMItem *));
         if (new == NULL)
                 return 1;
 

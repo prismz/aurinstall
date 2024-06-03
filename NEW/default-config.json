@@ -1,3 +1,4 @@
 {
-        "cache_path": "/var/cache/aurinstall"
+        "cache_path": "/var/cache/aurinstall",
+        "color": true
 }

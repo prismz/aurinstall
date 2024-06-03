@@ -25,9 +25,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* hashmap */
-#define JSONLIB_MAX(a, b) ((a) > (b)) ? (a) : (b)
-
 typedef struct HMItem HMItem;
 
 struct HMItem {

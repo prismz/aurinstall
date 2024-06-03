@@ -1,5 +1,5 @@
 #include "aurinstall.h"
-#include "install.c"
+#include "install.h"
 #include "alloc.h"
 #include "util.h"
 
@@ -7,32 +7,42 @@
 #include <stdlib.h>
 #include <json-c/json.h>
 
-int parse_config(struct aurinstall_opts *opts)
+static int parse_config(struct aurinstall_opts *opts)
 {
         char *config_contents = read_file(DEFAULT_CONFIG_PATH);
         if (config_contents == NULL)
                 fatal_err("failed to read config file.");
 
         json_object *cfg_json = json_tokener_parse(config_contents);
-        
+
         /* cache dir */
         json_object *cachedir_path_json;
         json_object_object_get_ex(cfg_json, "cache_path", &cachedir_path_json);
         opts->cache_path = safe_strdup(
                         json_object_get_string(cachedir_path_json)
         );
-       
-        printf("CACHE PATH: %s\n", opts->cache_path);
+
+        /* color */
+        json_object *color_json;
+        json_object_object_get_ex(cfg_json, "color", &color_json);
+        opts->color = json_object_get_boolean(color_json);
+
         return 0;
 }
 
-void init(struct aurinstall_opts *opts)
+static void init(struct aurinstall_opts *opts)
 {
+        if (opts == NULL)
+                fatal_err("NULL passed to init()");
+
+        opts->color = true;
+        opts->installed_packages_info = NULL;
+
         /* parse config file, generating
          * one and prompting user if it doesn't exist */
         if (file_exists(DEFAULT_CONFIG_PATH)) {
                 if (parse_config(opts))
-                        fatal_err("couldn't parse config at %s.", 
+                        fatal_err("couldn't parse config at %s.",
                                         DEFAULT_CONFIG_PATH);
         } else {
                 fatal_err("config file doesn't exist. reinstall to fix.");
@@ -43,12 +53,25 @@ void init(struct aurinstall_opts *opts)
 
         /* get list of installed packages and check for missing dependencies
          * and installed out of date packages. */
-        if (validate_installed())
-                fatal_err("failed to validate installed packages.");
+        if (get_installed_pkgs(opts))
+                fatal_err("failed to find installed packages.");
 
 }
 
-void usage(void)
+static void print_opts(struct aurinstall_opts *opts)
+{
+        printf("cachedir: %s\n", opts->cache_path);
+        printf("color: %d\n", opts->color);
+        printf("%ld installed locally:\n", opts->installed_packages->stored);
+        for (size_t i = 0; i < opts->installed_packages->can_store; i++) {
+                HMItem *atom = opts->installed_packages->items[i];
+                if (atom == NULL)
+                        continue;
+                printf("%s --- %s\n", atom->key, (char *)atom->val);
+        }
+}
+
+static void usage(void)
 {
         printf("Usage: aurinstall [PACKAGE1] [PACKAGE2] [OPTION]...\n\n");
 
@@ -64,7 +87,7 @@ void usage(void)
         exit(0);
 }
 
-void version(void)
+static void version(void)
 {
         printf("aurinstall %s\n", VERSION);
 
@@ -84,5 +107,7 @@ int main(int argc, char **argv)
         struct aurinstall_opts opts;
         init(&opts);
 
-        free(opts.cache_path);
+        print_opts(&opts);
+
+        update(&opts);
 }
