@@ -7,11 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <json-c/json.h>
 
 int get_installed_pkgs(struct aurinstall_opts *opts)
 {
-        HashMap *installed_packages = new_hashmap(16);
+        struct hashmap *installed_packages = new_hashmap(64);
 
         FILE *fp = popen("pacman -Qm --color=never", "r");
         char *line_buf = safe_malloc(sizeof(char) * 1024);
@@ -36,15 +37,14 @@ int get_installed_pkgs(struct aurinstall_opts *opts)
                 char *version_ro = line_buf + splitspace_idx + 1;
                 char *name_ro = line_buf;
 
-                char *name = safe_strdup(name_ro);
                 char *version = safe_strdup(version_ro);
 
-                HMItem *item = new_item(name, version, free, free);
-                if (hashmap_set(installed_packages, item) != 0)
+                struct hashmap_item *item = new_hashmap_item(name_ro, version, free);
+                if (hashmap_insert(installed_packages, item) < 0)
                         fatal_err("failed to set hashmap item.");
         }
 
-        if (installed_packages->stored == 0) {
+        if (installed_packages->n == 0) {
                 free_hashmap(installed_packages);
                 opts->installed_packages = NULL;
                 return 0;
@@ -59,7 +59,7 @@ int get_installed_pkgs(struct aurinstall_opts *opts)
 
 int get_installed_pkg_info(struct aurinstall_opts *opts)
 {
-        HashMap *installed = opts->installed_packages;
+        struct hashmap *installed = opts->installed_packages;
         if (installed == NULL)
                 return 1;
 
@@ -68,23 +68,36 @@ int get_installed_pkg_info(struct aurinstall_opts *opts)
         strcpy(request, "https://aur.archlinux.org/rpc/?v=5&type=info");
         size_t request_len = strlen(request);
 
-        for (size_t i = 0; i < installed->can_store; i++) {
-                HMItem *atom = installed->items[i];
+        char *delim = "&arg[]=";
+        size_t delim_len = strlen(delim);
+        int done = 0;
+
+        for (size_t i = 0; i < installed->capacity; i++) {
+                struct hashmap_item *atom = installed->items[i];
+                struct hashmap_item *curr;
                 if (atom == NULL)
                         continue;
 
-                char *delim = "&arg[]=";
-                size_t delim_len = strlen(delim);
-                size_t name_len = strlen(atom->key);
+                while (atom != NULL) {
+                        curr = atom;
+                        atom = atom->next;
 
-                if (request_len + delim_len + name_len > 4443) {
-                        err("too many installed packages to get info in one request. if you are updating, simply update again.");
-                        break;
+                        size_t name_len = strlen(curr->key);
+
+                        if (request_len + delim_len + name_len > 4443) {
+                                err("too many installed packages to get info in one request. if you are updating, simply update again.");
+                                done = 1;
+                                break;
+                        }
+
+                        request_len += delim_len + strlen(curr->key);
+
+                        strcat(request, delim);
+                        strcat(request, curr->key);
                 }
-                request_len += delim_len + strlen(atom->key);
 
-                strcat(request, delim);
-                strcat(request, atom->key);
+                if (done)
+                        break;
         }
 
         char *response = requests_get(request);
@@ -93,9 +106,6 @@ int get_installed_pkg_info(struct aurinstall_opts *opts)
 
         json_object *json = json_tokener_parse(response);
 
-        printf("RESPONSE: %s\n", response);
-
-        free_hashmap(installed);
         free(request);
         free(response);
 
@@ -113,6 +123,7 @@ int get_installed_pkg_info(struct aurinstall_opts *opts)
 
 int update(struct aurinstall_opts *opts)
 {
+        printf("begin update...\n");
         if (opts->installed_packages_info == NULL) {
                 if (get_installed_pkg_info(opts))
                         fatal_err("failed to get information on installed packages.");
@@ -122,7 +133,43 @@ int update(struct aurinstall_opts *opts)
         json_object *resultcount_json;
         json_object_object_get_ex(j, "resultcount", &resultcount_json);
         int resultcount = json_object_get_int64(resultcount_json);
-        printf("%d request results.\n", resultcount);
+
+        json_object *resultlist;
+        json_object_object_get_ex(j, "results", &resultlist);
+
+        int update_count = 0;
+        for (int i = 0; i < resultcount; i++) {
+                json_object *result = json_object_array_get_idx(resultlist, i);
+
+                json_object *vers_json, *name_json, *ood_json;
+                json_object_object_get_ex(result, "Version", &vers_json);
+                json_object_object_get_ex(result, "Name", &name_json);
+                json_object_object_get_ex(result, "OutOfDate", &ood_json);
+
+                const char *vers = json_object_get_string(vers_json);
+                const char *name = json_object_get_string(name_json);
+                const char *ood  = json_object_get_string(ood_json);
+
+                char *installed_vers = (char *)hashmap_get(
+                                opts->installed_packages,
+                                name
+                );
+
+                if (strcmp(vers, installed_vers) == 0)  /* equal versions */
+                        continue;
+
+                printf("update for %s from version %s to %s\n",
+                                name, installed_vers, vers);
+                /* TODO */
+                update_count++;
+        }
+
+        if (update_count == 0)
+                printf("no updates. exiting.\n");
 
         return 0;
+}
+
+int install(struct aurinstall_opts *opts, const char *package_name)
+{
 }

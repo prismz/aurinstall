@@ -1,67 +1,48 @@
-/*
- * This file is part of aurinstall.
- *
- * aurinstall is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * aurinstall is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
- * Copyright (C) 2023 Hasan Zahra
- * https://github.com/prismz/aurinstall
- */
-
 #ifndef HASHMAP_H
 #define HASHMAP_H
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdbool.h>
 
-typedef struct HMItem HMItem;
-
-struct HMItem {
-	char *key;
-	void *val;
-
-	void (*k_free_func)(void *);
-	void (*v_free_func)(void *);
-};
-
-#define hashmap_item_free_func(a) (void (*)(void *))a
-
-typedef struct {
-	HMItem **items;  /* buckets */
-
-	size_t can_store;
-	size_t stored;
-} HashMap;
-
-HMItem *new_item(char *key, void *val,
-                void (*k_free_func)(void *), void (*v_free_func)(void *));
-void free_item(HMItem *item);
-HashMap *new_hashmap(size_t capacity);
-void free_hashmap(HashMap *map);
-int check_hashmap_capacity(HashMap *map, size_t n);
-int hashmap_set(HashMap *map, HMItem *item);
+#define HM_CALLOC_FUNC calloc
+#define HM_STRDUP_FUNC strdup
+#define HM_EXIT_ON_ALLOC_FAIL 1
 
 /*
- * 64-bit FNV-1a hash:
- * https://en.wikipedia.org/wiki/Fowler–Noll–Vo_hash_function
- * https://github.com/benhoyt/ht/blob/master/ht.c
+ * if using structs as values, this conveniently
+ * typecasts your struct's free function
+ * so that it can be passed to new_hashmap_item()
  */
-#define FNV_OFFSET 14695981039346656037UL
-#define FNV_PRIME 1099511628211UL
-uint64_t hashmap_hash_func(char *key);
+#define hashmap_item_free_func(a) (void (*)(void *))a
 
-void *hashmap_index(HashMap *map, char *key);
-void hashmap_remove(HashMap *map, char *key);
+#define HM_FNV_OFFSET 14695981039346656037UL
+#define HM_FNV_PRIME 1099511628211UL
+
+struct hashmap_item;
+struct hashmap_item {
+        char *key;
+        uint32_t hash;
+        void *val;
+        void (*val_free_func)(void *);
+
+        /* linked list to store collisions */
+        struct hashmap_item *next;
+};
+
+struct hashmap {
+       struct hashmap_item **items;
+       size_t n;
+       size_t capacity;
+};
+
+struct hashmap_item *new_hashmap_item(const char *key, void *val,
+                void (*val_free_func)(void *));
+struct hashmap *new_hashmap(size_t capacity);
+void free_hashmap(struct hashmap *hm);
+uint32_t hm_fnv1a_hash(const char *str, size_t size);
+int hashmap_insert(struct hashmap *hm, struct hashmap_item *item);
+int hashmap_remove(struct hashmap *hm, const char *key);
+void *hashmap_get(struct hashmap *hm, const char *key);
+void hashmap_print(struct hashmap *hm);
 
 #endif  /* HASHMAP_H */

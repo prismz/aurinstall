@@ -13,7 +13,7 @@
 struct aurinstall_opts {
         char *cache_path;
         /* map installed packages and their versions */
-        HashMap *installed_packages;
+        struct hashmap *installed_packages;
         json_object *installed_packages_info;
         bool color;
 };
