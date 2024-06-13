@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -67,6 +67,20 @@ void fatal_err(const char *fmt, ...)
         exit(1);
 }
 
+void warning(const char *fmt, ...)
+{
+        va_list ap;
+        va_start(ap, fmt);
+
+        fprintf(stderr, "warning: ");
+
+        if (fmt != NULL)
+                vfprintf(stderr, fmt, ap);
+        else
+                fprintf(stderr, "no message?");
+        fprintf(stderr, "\n");
+}
+
 /* if path == NULL or dir doesn't exist, returns true */
 bool dir_is_empty(const char *path)
 {
@@ -95,7 +109,7 @@ bool yesno_prompt(const char *prompt, bool default_answer)
 {
         if (prompt == NULL)
                 fatal_err("no prompt for yesno_prompt?");
-                
+
         char yc = 'y';
         char nc = 'N';
         if (default_answer) {
@@ -156,7 +170,7 @@ bool file_exists(const char *path)
                 return false;
         if (access(path, F_OK) != -1)
                 return true;
-        return false; 
+        return false;
 }
 
 char *read_file(const char *path)
@@ -164,13 +178,13 @@ char *read_file(const char *path)
         FILE *fp = fopen(path, "rb");
         if (!fp)
                 return NULL;
-       
+
         size_t cap = FCHUNKSZ * 2;
         size_t i = 0;
         size_t n = 0;
         char *buf = safe_malloc(cap);
         memset(buf, 0, cap);
-        
+
         char tmp[FCHUNKSZ + 1];
         for (;;) {
                 n = fread(tmp, 1, FCHUNKSZ, fp);

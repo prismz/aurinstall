@@ -62,9 +62,8 @@ static void print_opts(struct aurinstall_opts *opts)
 {
         printf("cachedir: %s\n", opts->cache_path);
         printf("color: %d\n", opts->color);
-        printf("%ld installed locally:\n", opts->installed_packages->n);
         for (size_t i = 0; i < opts->installed_packages->capacity; i++) {
-                struct hashmap_item *atom = opts->installed_packages->items[i];
+                struct bucket *atom = opts->installed_packages->buckets[i];
                 if (atom == NULL)
                         continue;
                 printf("%s --- %s\n", atom->key, (char *)atom->val);

@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
@@ -21,15 +21,16 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#define FCHUNKSZ 512 
+#define FCHUNKSZ 512
 
 #include <stdio.h>
 #include <stdbool.h>
 
 /* this could be just one function but you can't really
  * conveniently pass infinite args between the two */
-void err(const char *fmt, ...);
+void nonfatal_err(const char *fmt, ...);
 void fatal_err(const char *fmt, ...);
+void warning(const char *fmt, ...);
 bool dir_is_empty(const char *dir);
 bool yesno_prompt(const char *prompt, bool default_answer);
 char *get_user_home(void);
