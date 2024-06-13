@@ -2,9 +2,10 @@
 #define INSTALL_H
 
 #include "aurinstall.h"
+#include "rpc.h"
 
 struct update_handle {
-        json_object **package_metadatas;
+        struct rpc_results *package_metadatas;
         size_t n;
         size_t capacity;
 
@@ -13,7 +14,7 @@ struct update_handle {
         size_t longest_pkg_vers_len;
 };
 
-int get_installed_pkgs(struct aurinstall_opts *opts);
+struct hashmap *get_installed_pkgs(void);
 int get_installed_pkg_info(struct aurinstall_opts *opts);
 int update(struct aurinstall_opts *opts);
 

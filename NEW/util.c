@@ -205,3 +205,115 @@ char *read_file(const char *path)
 
         return buf;
 }
+
+int digits(int n)
+{
+        int r = 1;
+        if (n < 0) n = (n == INT_MIN) ? INT_MAX: -n;
+        while (n > 9) {
+                n /= 10;
+                r++;
+        }
+        return r;
+}
+
+/*
+ * str += trim_whitespace(str);
+ */
+int trim_whitespace(char *str)
+{
+        if (str == NULL)
+                return 0;
+
+        int len = (int)strlen(str);
+        int start;
+        for (start = 0; isspace(str[start]); start++);
+
+        int i;
+        for (i = len - 1; i >= 0 && isspace(str[i]); i--);
+        i++;
+        str[i] = 0;
+
+        return start;
+}
+
+void integer_exclude_prompt(char *prompt, int *flags_array, int size)
+{
+        printf("%s", prompt);
+        fflush(stdout);
+
+        char *input = safe_calloc(32, sizeof(char));
+        char **input_addr = &input;  /* store this so we can free later */
+        ssize_t n = read(0, input, 32);
+        if (n < 0)
+                return;
+
+        input += trim_whitespace(input);
+
+        size_t len = strlen(input);
+        if (len == 0)
+                return;
+
+        char *ptr = strtok(input, " ");
+        while (ptr != NULL) {
+                /* find the slash, used to check valid token later */
+                int ptr_slash_idx = -1;
+                size_t ptr_len = strlen(ptr);
+                for (size_t i = 0; i < ptr_len; i++) {
+                        if (ptr[i] == '-') {
+                                ptr_slash_idx = i;
+                                break;
+                        }
+                }
+
+                if (is_integer(ptr)) {
+                        int idx = atoi(ptr) - 1;
+                        flags_array[idx] = 0;
+                } else if (ptr[0] == '^') {
+                        if (!is_integer(ptr + 1))
+                                nonfatal_err("invalid str: %s", ptr);
+
+                        int idx = atoi(ptr + 1) - 1;
+                        memset(flags_array, 0, size);
+                        flags_array[idx] = 1;
+                } else if (ptr_slash_idx != -1) {
+                        int start, end;
+                        sscanf(ptr, "%d-%d", &start, &end);
+
+                        if (start > end) {
+                                int temp = end;
+                                end = start;
+                                start = temp;
+                        }
+
+                        start--;
+                        end--;
+
+                        int i = start;
+                        while (i <= end) {
+                                flags_array[i] = 0;
+                                i++;
+                        }
+                } else {
+                        fatal_err("invalid exclude number %s", ptr);
+                }
+
+                ptr = strtok(NULL, " ");
+        }
+
+        free(*input_addr);
+}
+
+bool is_integer(char *str)
+{
+        if (str == NULL)
+                return false;
+
+        size_t len = strlen(str);
+        for (size_t i = 0; i < len; i++) {
+                if (!isdigit(str[i]))
+                        return false;
+        }
+
+        return true;
+}

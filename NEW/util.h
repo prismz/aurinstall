@@ -37,5 +37,9 @@ char *get_user_home(void);
 bool dir_exists(const char *path);
 bool file_exists(const char *path);
 char *read_file(const char *path);
+int digits(int n);
+int trim_whitespace(char *str);
+void integer_exclude_prompt(char *prompt, int *flags_array, int size);
+bool is_integer(char *str);
 
 #endif  /* UTIL_H */

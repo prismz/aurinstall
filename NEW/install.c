@@ -1,8 +1,10 @@
 #include "install.h"
 #include "aurinstall.h"
+#include "rpc.h"
 #include "requests.h"
 #include "alloc.h"
 #include "util.h"
+#include "print.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +12,7 @@
 #include <time.h>
 #include <json-c/json.h>
 
-int get_installed_pkgs(struct aurinstall_opts *opts)
+struct hashmap *get_installed_pkgs(void)
 {
         struct hashmap *installed_packages = hashmap_new(free);
 
@@ -44,22 +46,18 @@ int get_installed_pkgs(struct aurinstall_opts *opts)
         }
 
         if (installed_packages->n_buckets == 0) {
-                hashmap_free(installed_packages);
-                opts->installed_packages = NULL;
-                return 0;
+                return installed_packages;
         }
 
         free(line_buf);
         pclose(fp);
 
-        opts->installed_packages = installed_packages;
-        return 0;
+        return installed_packages;
 }
 
 int get_installed_pkg_info(struct aurinstall_opts *opts)
 {
-        struct hashmap *installed = opts->installed_packages;
-        if (installed == NULL)
+        if (opts == NULL || opts->installed_packages == NULL)
                 return 1;
 
         /* max length of request is 4443 bytes */
@@ -70,6 +68,8 @@ int get_installed_pkg_info(struct aurinstall_opts *opts)
         char *delim = "&arg[]=";
         size_t delim_len = strlen(delim);
         int done = 0;
+
+        struct hashmap *installed = opts->installed_packages;
 
         for (size_t i = 0; i < installed->capacity; i++) {
                 struct bucket *atom = installed->buckets[i];
@@ -99,23 +99,7 @@ int get_installed_pkg_info(struct aurinstall_opts *opts)
                         break;
         }
 
-        char *response = requests_get(request);
-        if (response == NULL)
-                fatal_err("failed to query AUR rpc.");
-
-        json_object *json = json_tokener_parse(response);
-
-        free(request);
-        free(response);
-
-        json_object *err;
-        json_object_object_get_ex(json, "error", &err);
-        if (err != NULL) {
-                fatal_err("AUR request failed with error %s",
-                                json_object_get_string(err));
-        }
-
-        opts->installed_packages_info = json;
+        opts->installed_packages_info = make_rpc_request(installed, request);
 
         return 0;
 }
@@ -130,41 +114,48 @@ static int update_from_handle(struct aurinstall_opts *opts,
         size_t namecol_len = uph->longest_pkg_name_len + 2;
         size_t verscol_len = uph->longest_pkg_vers_len + 2;
 
+        int pad_amount = digits(uph->n);
+
+        int *to_update_idx = safe_calloc(uph->n, sizeof(int));
+
+        /* i tried memset, wouldn't work for some reason */
+        for (size_t i = 0; i < uph->n; i++)
+                to_update_idx[i] = 1;
+
         for (size_t i = 0; i < uph->n; i++) {
-                json_object *result = uph->package_metadatas[i];
-                json_object *vers_json, *name_json, *ood_json;
-                json_object_object_get_ex(result, "Version", &vers_json);
-                json_object_object_get_ex(result, "Name", &name_json);
-                json_object_object_get_ex(result, "OutOfDate", &ood_json);
+                struct package_info *pkg_info = uph->package_metadatas->infolist[i];
+                if (pkg_info == NULL)
+                        continue;
 
-                const char *name = json_object_get_string(name_json);
-                const char *vers = json_object_get_string(vers_json);
-                const char *ood  = json_object_get_string(ood_json);
+                char *name = pkg_info->name;
+                char *installed_vers = pkg_info->inst_vers;
+                char *ood = pkg_info->ood;
+                char *vers = pkg_info->avail_vers;
 
-                char *installed_vers = (char *)hashmap_get(
-                                opts->installed_packages,
-                                name
-                );
                 size_t name_padlen = namecol_len - strlen(name);
-                size_t vers_padlen = verscol_len - strlen(installed_vers);
 
                 char name_padding[namecol_len + 1];
                 memset(name_padding, ' ', namecol_len);
                 name_padding[namecol_len] = 0;
 
-                char vers_padding[verscol_len + 1];
-                memset(vers_padding, ' ', verscol_len);
-                vers_padding[verscol_len] = 0;
+                char number_fmt[256];
+                snprintf(number_fmt, 256, "%%0%dd", pad_amount);
 
-                printf("aur/%s%*.*s", name, (int)name_padlen,
+                printf(number_fmt, i + 1);
+
+                printf(". aur/%s%*.*s", name, (int)name_padlen,
                                 (int)name_padlen, name_padding);
-                printf("%s%*.*s", installed_vers, (int)vers_padlen,
-                                (int)vers_padlen, vers_padding);
-                printf(" ->  ");
-                printf("%s", vers);
+
+                print_version_difference(installed_vers, vers, verscol_len);
 
                 printf("\n");
         }
+
+        integer_exclude_prompt("packages to exclude? (1, 1-3, ^1) ",
+                        (to_update_idx), uph->n);
+
+        for (size_t i = 0; i < uph->n; i++)
+                printf("%d\n", to_update_idx[i]);
 
         return 0;
 }
@@ -172,67 +163,35 @@ static int update_from_handle(struct aurinstall_opts *opts,
 int update(struct aurinstall_opts *opts)
 {
         if (opts->installed_packages_info == NULL) {
-                if (get_installed_pkg_info(opts))
+                if (get_installed_pkg_info(opts) == NULL)
                         fatal_err("failed to get information on installed packages.");
         }
 
-        json_object *j = opts->installed_packages_info;
-        json_object *resultcount_json;
-        json_object_object_get_ex(j, "resultcount", &resultcount_json);
-        int resultcount = json_object_get_int64(resultcount_json);
-
-        json_object *resultlist;
-        json_object_object_get_ex(j, "results", &resultlist);
-
-        /* TODO: handle this better */
-        if (resultcount == 0)
-                return 0;
+        int resultcount = opts->installed_packages_info->n;
 
         struct update_handle uph;
-        uph.n = 0;
         uph.longest_pkg_name_len = 0;
         uph.longest_pkg_vers_len = 0;
-        uph.capacity = (size_t)((float)resultcount /
-                        (float)(HM_HASHMAP_MAX_LOAD));
-        uph.package_metadatas = safe_calloc(uph.capacity,
-                        sizeof(json_object *));
+        struct rpc_results *metadatas = safe_calloc(1, sizeof(struct rpc_results *));
 
         for (int i = 0; i < resultcount; i++) {
-                json_object *result = json_object_array_get_idx(resultlist, i);
-
-                json_object *vers_json, *name_json, *ood_json;
-                json_object_object_get_ex(result, "Version", &vers_json);
-                json_object_object_get_ex(result, "Name", &name_json);
-                json_object_object_get_ex(result, "OutOfDate", &ood_json);
-
-                const char *vers = json_object_get_string(vers_json);
-                const char *name = json_object_get_string(name_json);
-                const char *ood  = json_object_get_string(ood_json);
-
-                char *installed_vers = (char *)hashmap_get(
-                                opts->installed_packages,
-                                name
-                );
-
-                if (ood != NULL)
-                        warning("installed package %s is out of date.", name);
-
-                if (strcmp(vers, installed_vers) == 0)  /* equal versions */
+                struct package_info *info =
+                        opts->installed_packages_info->infolist[i];
+                if (info == NULL)
                         continue;
 
-                size_t namelen = strlen(name);
-                size_t verslen = strlen(installed_vers);
+                if (strcmp(info->avail_vers, info->inst_vers) == 0)  /* equal versions */
+                        continue;
 
-                if (namelen > uph.longest_pkg_name_len)
-                        uph.longest_pkg_name_len = namelen;
-                if (verslen > uph.longest_pkg_vers_len)
-                        uph.longest_pkg_vers_len = verslen;
-
-                uph.package_metadatas[uph.n++] = result;
+                metadatas->infolist[metadatas->n++] = info;
         }
 
-        if (uph.n == 0)
+        if (metadatas->n == 0) {
                 printf("no updates. exiting.\n");
+                return 0;
+        }
+
+        uph.package_metadatas = metadatas;
 
         if (update_from_handle(opts, &uph))
                 fatal_err("update failed.");

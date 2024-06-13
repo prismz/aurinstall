@@ -2,6 +2,7 @@
 #include "install.h"
 #include "alloc.h"
 #include "util.h"
+#include "print.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +54,7 @@ static void init(struct aurinstall_opts *opts)
 
         /* get list of installed packages and check for missing dependencies
          * and installed out of date packages. */
-        if (get_installed_pkgs(opts))
+        if ((opts->installed_packages = get_installed_pkgs()) == NULL)
                 fatal_err("failed to find installed packages.");
 
 }
@@ -108,6 +109,5 @@ int main(int argc, char **argv)
 
 
         // print_opts(&opts);
-
         update(&opts);
 }

@@ -2,6 +2,7 @@
 #define AURINSTALL_H
 
 #include "hashmap.h"
+#include "rpc.h"
 
 #include <stdbool.h>
 #include <json-c/json.h>
@@ -14,8 +15,8 @@ struct aurinstall_opts {
         char *cache_path;
         /* map installed packages and their versions */
         struct hashmap *installed_packages;
-        json_object *installed_packages_info;
-        bool color;
+        struct rpc_results *installed_packages_info;
+        bool color;  /* TODO */
 };
 
 #endif  /* AURINSTALL_H */
