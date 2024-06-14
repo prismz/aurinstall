@@ -38,7 +38,6 @@ struct rpc_results *make_rpc_request(struct hashmap *installed,
                         sizeof(struct package_info *));
         res->capacity = res->n + 8;
 
-
         for (int i = 0; i < res->n; i++) {
                 json_object *result = json_object_array_get_idx(results, i);
 
@@ -67,4 +66,6 @@ struct rpc_results *make_rpc_request(struct hashmap *installed,
 
                 res->infolist[i] = pkg_info;
         }
+
+        return res;
 }

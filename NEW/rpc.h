@@ -20,10 +20,6 @@ struct rpc_results {
         struct package_info **infolist;
         size_t capacity;
         int n;
-
-        /* for formatting */
-        size_t longest_installed_vers_len;
-        size_t longest_name_len;
 };
 
 struct rpc_results *make_rpc_request(struct hashmap *installed,

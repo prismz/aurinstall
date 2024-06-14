@@ -100,6 +100,10 @@ int get_installed_pkg_info(struct aurinstall_opts *opts)
         }
 
         opts->installed_packages_info = make_rpc_request(installed, request);
+        free(request);
+        if (opts->installed_packages_info == NULL)
+                return 1;
+
 
         return 0;
 }
@@ -111,18 +115,19 @@ static int update_from_handle(struct aurinstall_opts *opts,
         if (uph == NULL || uph->package_metadatas == NULL)
                 return 1;
 
+        int n = uph->package_metadatas->n;
         size_t namecol_len = uph->longest_pkg_name_len + 2;
         size_t verscol_len = uph->longest_pkg_vers_len + 2;
 
-        int pad_amount = digits(uph->n);
+        int pad_amount = digits(n);
 
-        int *to_update_idx = safe_calloc(uph->n, sizeof(int));
+        int *to_update_idx = safe_calloc(n, sizeof(int));
 
         /* i tried memset, wouldn't work for some reason */
-        for (size_t i = 0; i < uph->n; i++)
+        for (size_t i = 0; i < n; i++)
                 to_update_idx[i] = 1;
 
-        for (size_t i = 0; i < uph->n; i++) {
+        for (size_t i = 0; i < n; i++) {
                 struct package_info *pkg_info = uph->package_metadatas->infolist[i];
                 if (pkg_info == NULL)
                         continue;
@@ -152,9 +157,9 @@ static int update_from_handle(struct aurinstall_opts *opts,
         }
 
         integer_exclude_prompt("packages to exclude? (1, 1-3, ^1) ",
-                        (to_update_idx), uph->n);
+                        (to_update_idx), n);
 
-        for (size_t i = 0; i < uph->n; i++)
+        for (size_t i = 0; i < n; i++)
                 printf("%d\n", to_update_idx[i]);
 
         return 0;
@@ -163,7 +168,7 @@ static int update_from_handle(struct aurinstall_opts *opts,
 int update(struct aurinstall_opts *opts)
 {
         if (opts->installed_packages_info == NULL) {
-                if (get_installed_pkg_info(opts) == NULL)
+                if (get_installed_pkg_info(opts))
                         fatal_err("failed to get information on installed packages.");
         }
 
@@ -172,7 +177,11 @@ int update(struct aurinstall_opts *opts)
         struct update_handle uph;
         uph.longest_pkg_name_len = 0;
         uph.longest_pkg_vers_len = 0;
+
         struct rpc_results *metadatas = safe_calloc(1, sizeof(struct rpc_results *));
+        metadatas->infolist = safe_calloc(resultcount, sizeof(struct package_info *));
+        metadatas->capacity = resultcount;
+        metadatas->n = 0;
 
         for (int i = 0; i < resultcount; i++) {
                 struct package_info *info =
@@ -182,6 +191,14 @@ int update(struct aurinstall_opts *opts)
 
                 if (strcmp(info->avail_vers, info->inst_vers) == 0)  /* equal versions */
                         continue;
+
+                size_t namelen = strlen(info->name);
+                size_t verslen = strlen(info->inst_vers);
+
+                if (namelen > uph.longest_pkg_name_len)
+                        uph.longest_pkg_name_len = namelen;
+                if (verslen > uph.longest_pkg_vers_len)
+                        uph.longest_pkg_vers_len = verslen;
 
                 metadatas->infolist[metadatas->n++] = info;
         }

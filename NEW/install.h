@@ -6,8 +6,6 @@
 
 struct update_handle {
         struct rpc_results *package_metadatas;
-        size_t n;
-        size_t capacity;
 
         /* for formatting */
         size_t longest_pkg_name_len;
