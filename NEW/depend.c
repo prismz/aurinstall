@@ -9,6 +9,9 @@
 #include <string.h>
 #include <json-c/json.h>
 
+/* TODO: this could all definitely be improved.
+ * I forgot alpm_checkdeps() exists... */
+
 struct deplist *deplist_new(size_t cap)
 {
         struct deplist *dl = safe_calloc(1, sizeof(struct deplist));
