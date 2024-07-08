@@ -1,223 +1,96 @@
 #include "install.h"
-#include "aurinstall.h"
-#include "rpc.h"
-#include "requests.h"
+#include "options.h"
 #include "alloc.h"
+#include "depend.h"
+#include "repo.h"
 #include "util.h"
-#include "print.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <json-c/json_object.h>
+#include <unistd.h>
 #include <string.h>
-#include <time.h>
+#include <stdbool.h>
+#include <alpm_list.h>
+#include <alpm.h>
 #include <json-c/json.h>
 
-struct hashmap *get_installed_pkgs(void)
+int download_package_source(const char *name, struct opts *opts)
 {
-        struct hashmap *installed_packages = hashmap_new(free);
+        size_t url_size = strlen(name) + 64;
+        char *url = safe_calloc(url_size, 1);
+        snprintf(url, url_size, "https://aur.archlinux.org/%s.git", name);
+        printf("download package source from %s...\n", url);
 
-        FILE *fp = popen("pacman -Qm --color=never", "r");
-        char *line_buf = safe_malloc(sizeof(char) * 1024);
+        size_t download_path_len = strlen(opts->cache_path) + strlen(name) + 8;
+        char *download_path = safe_calloc(download_path_len, 1);
+        snprintf(download_path, download_path_len, "%s/%s",
+                        opts->cache_path, name);
 
-        while (fgets(line_buf, 1024, fp) != NULL) {
-                size_t len = strlen(line_buf);
-                line_buf[len - 1] = '\0';
-                len--;
-
-                int splitspace_idx = -1;
-                for (size_t i = 0; i < len; i++) {
-                        if (line_buf[i] == ' ') {
-                                splitspace_idx = (int)i;
-                                break;
-                        }
-                }
-
-                if (splitspace_idx == -1)
-                        fatal_err("invalid package atom: %s", line_buf);
-
-                line_buf[splitspace_idx] = '\0';
-                char *version_ro = line_buf + splitspace_idx + 1;
-                char *name_ro = line_buf;
-
-                char *version = safe_strdup(version_ro);
-
-                if (hashmap_insert(installed_packages, name_ro, version) < 0)
-                        fatal_err("failed to set hashmap item.");
-        }
-
-        if (installed_packages->n_buckets == 0) {
-                return installed_packages;
-        }
-
-        free(line_buf);
-        pclose(fp);
-
-        return installed_packages;
-}
-
-int get_installed_pkg_info(struct aurinstall_opts *opts)
-{
-        if (opts == NULL || opts->installed_packages == NULL)
+        char *argv[] = { "git", "clone", url, download_path, NULL };
+        if (execvp("git", argv) < 0) {
+                perror("failed to clone");
                 return 1;
-
-        /* max length of request is 4443 bytes */
-        char *request = safe_calloc(1, 4444);
-        strcpy(request, "https://aur.archlinux.org/rpc/?v=5&type=info");
-        size_t request_len = strlen(request);
-
-        char *delim = "&arg[]=";
-        size_t delim_len = strlen(delim);
-        int done = 0;
-
-        struct hashmap *installed = opts->installed_packages;
-
-        for (size_t i = 0; i < installed->capacity; i++) {
-                struct bucket *atom = installed->buckets[i];
-                struct bucket *curr;
-                if (atom == NULL)
-                        continue;
-
-                while (atom != NULL) {
-                        curr = atom;
-                        atom = atom->next;
-
-                        size_t name_len = strlen(curr->key);
-
-                        if (request_len + delim_len + name_len > 4443) {
-                                warning("too many installed packages to get info in one request. if you are updating, simply update again.");
-                                done = 1;
-                                break;
-                        }
-
-                        request_len += delim_len + strlen(curr->key);
-
-                        strcat(request, delim);
-                        strcat(request, curr->key);
-                }
-
-                if (done)
-                        break;
         }
 
-        opts->installed_packages_info = make_rpc_request(installed, request);
-        free(request);
-        if (opts->installed_packages_info == NULL)
-                return 1;
-
+        free(url);
+        free(download_path);
 
         return 0;
 }
 
-/* assumes struct is valid */
-static int update_from_handle(struct aurinstall_opts *opts,
-                struct update_handle *uph)
+/*
+ * package sources must already be downloaded.
+ * THIS WILL NOT PROMPT FOR ANYTHING
+ */
+static int build_package(const char *name, struct opts *opts)
 {
-        if (uph == NULL || uph->package_metadatas == NULL)
+        json_object *package_data;
+        json_object_object_get_ex(opts->repo_data, name, &package_data);
+
+        /* not an aur package */
+        if (package_data == NULL)
                 return 1;
 
-        int n = uph->package_metadatas->n;
-        size_t namecol_len = uph->longest_pkg_name_len + 2;
-        size_t verscol_len = uph->longest_pkg_vers_len + 2;
-
-        int pad_amount = digits(n);
-
-        int *to_update_idx = safe_calloc(n, sizeof(int));
-
-        /* i tried memset, wouldn't work for some reason */
-        for (size_t i = 0; i < n; i++)
-                to_update_idx[i] = 1;
-
-        for (size_t i = 0; i < n; i++) {
-                struct package_info *pkg_info = uph->package_metadatas->infolist[i];
-                if (pkg_info == NULL)
-                        continue;
-
-                char *name = pkg_info->name;
-                char *installed_vers = pkg_info->inst_vers;
-                char *ood = pkg_info->ood;
-                char *vers = pkg_info->avail_vers;
-
-                size_t name_padlen = namecol_len - strlen(name);
-
-                char name_padding[namecol_len + 1];
-                memset(name_padding, ' ', namecol_len);
-                name_padding[namecol_len] = 0;
-
-                char number_fmt[256];
-                snprintf(number_fmt, 256, "%%0%dd", pad_amount);
-
-                printf(number_fmt, i + 1);
-
-                printf(". aur/%s%*.*s", name, (int)name_padlen,
-                                (int)name_padlen, name_padding);
-
-                print_version_difference(installed_vers, vers, verscol_len);
-
-                printf("\n");
-        }
-
-        integer_exclude_prompt("packages to exclude? (1, 1-3, ^1) ",
-                        (to_update_idx), n);
-
-        for (size_t i = 0; i < n; i++)
-                printf("%d\n", to_update_idx[i]);
-
         return 0;
 }
 
-int update(struct aurinstall_opts *opts)
+bool build_files_exist(const char *name, struct opts *opts)
 {
-        if (opts->installed_packages_info == NULL) {
-                if (get_installed_pkg_info(opts))
-                        fatal_err("failed to get information on installed packages.");
+        if (!dir_exists(opts->cache_path))
+                return false;
+
+        size_t build_path_len = strlen(name) + strlen(opts->cache_path) + 16;
+        char *build_path = safe_calloc(build_path_len, 1);
+        snprintf(build_path, build_path_len, "%s/%s", opts->cache_path, name);
+
+        if (!dir_exists(build_path)) {
+                free(build_path);
+                return false;
         }
 
-        int resultcount = opts->installed_packages_info->n;
-
-        struct update_handle uph;
-        uph.longest_pkg_name_len = 0;
-        uph.longest_pkg_vers_len = 0;
-
-        struct rpc_results *metadatas = safe_calloc(1, sizeof(struct rpc_results *));
-        metadatas->infolist = safe_calloc(resultcount, sizeof(struct package_info *));
-        metadatas->capacity = resultcount;
-        metadatas->n = 0;
-
-        for (int i = 0; i < resultcount; i++) {
-                struct package_info *info =
-                        opts->installed_packages_info->infolist[i];
-                if (info == NULL)
-                        continue;
-
-                if (strcmp(info->avail_vers, info->inst_vers) == 0)  /* equal versions */
-                        continue;
-
-                size_t namelen = strlen(info->name);
-                size_t verslen = strlen(info->inst_vers);
-
-                if (namelen > uph.longest_pkg_name_len)
-                        uph.longest_pkg_name_len = namelen;
-                if (verslen > uph.longest_pkg_vers_len)
-                        uph.longest_pkg_vers_len = verslen;
-
-                metadatas->infolist[metadatas->n++] = info;
+        /* directory, but no files */
+        if (dir_is_empty(build_path)) {
+                free(build_path);
+                return false;
         }
 
-        if (metadatas->n == 0) {
-                printf("no updates. exiting.\n");
-                return 0;
-        }
-
-        uph.package_metadatas = metadatas;
-
-        if (update_from_handle(opts, &uph))
-                fatal_err("update failed.");
-
-        free(uph.package_metadatas);
-
-        return 0;
+        free(build_path);
+        return true;
 }
 
-int install(struct aurinstall_opts *opts, const char *package_name)
+/*
+ * Main function used to install packages.
+ *
+ * Will print packages, prompts for which packages to exclude
+ * Prompts to install other AUR dependencies if needed
+ * Asks to show diff (if build files exist) or MAKEPKG (if they don't)
+ * Prints all GPG keys and prompts for importing
+ */
+int install_packages(const char **targets, int n, struct opts *opts)
 {
+        const char *aur_targets[n];
+
+        for (int i = 0; i < n; i++) {
+        }
+
+        return 0;
 }

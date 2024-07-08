@@ -1,7 +1,7 @@
 # MAKE BETTER
 
 CC = cc
-CFLAGS := -Wall -Wextra -pedantic 
+CFLAGS := -Wall -Wextra -pedantic
 PRODCFLAGS := -O3
 DEBUGCFLAGS := -g
 DESTDIR := /usr/local/bin/
@@ -9,8 +9,17 @@ DESTDIR := /usr/local/bin/
 CFLAGS += $(shell pkg-config --cflags json-c)
 LDFLAGS += $(shell pkg-config --libs json-c)
 
-LDFLAGS += $(shell pkg-config --libs libcurl)
 CFLAGS += $(shell pkg-config --cflags libcurl)
+LDFLAGS += $(shell pkg-config --libs libcurl)
+
+CFLAGS += $(shell pkg-config --cflags zlib)
+LDFLAGS += $(shell pkg-config --libs zlib)
+
+CFLAGS += $(shell pkg-config --cflags libalpm)
+LDFLAGS += $(shell pkg-config --libs libalpm)
+
+# Didn't work with pkg-config?
+LDFLAGS += -lpacutils
 
 all:opts prod
 
@@ -22,8 +31,6 @@ debug:opts
 
 install:prod
 	cp -r aurinstall $(DESTDIR)
-	mkdir -p /var/cache/aurinstall
-	cp default-config.json /etc/aurinstall-config.json
 
 opts:
 	@echo CC: $(CC)

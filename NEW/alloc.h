@@ -13,13 +13,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with aurinstall.  If not, see <https://www.gnu.org/licenses/>.
- * 
+ *
  * Copyright (C) 2023 Hasan Zahra
  * https://github.com/prismz/aurinstall
  */
 
 #ifndef ALLOC_H
 #define ALLOC_H
+
+#define FCHUNKSZ 1024
 
 #include <stdlib.h>
 
