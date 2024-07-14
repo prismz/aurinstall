@@ -87,10 +87,10 @@ bool build_files_exist(const char *name, struct opts *opts)
  */
 int install_packages(const char **targets, int n, struct opts *opts)
 {
-        const char *aur_targets[n];
-
-        for (int i = 0; i < n; i++) {
-        }
+        struct deplist *deps = deplist_new(n * 8);
+        int n_aur_targets;
+        if (install_dependencies(targets, n, &n_aur_targets, deps, opts) == NULL)
+                fatal_err("failed to install dependencies");
 
         return 0;
 }

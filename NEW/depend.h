@@ -32,7 +32,7 @@ struct dep *satisfy_dep(const char *depstring, struct opts *opts, bool is_bdep);
 bool dep_satisfied(const char *depstring, struct opts *opts);
 int get_package_dependencies(const char *package_name, struct deplist *dl,
                 struct opts *opts);
-struct deplist *get_targets_dependencies(const char **targets, int n, struct opts *opts);
-bool dependency_prompt(struct deplist *dl, struct opts *opts);
+char **install_dependencies(const char **targets, int n_targets, int *n,
+                struct deplist *deps, struct opts *opts);
 
 #endif  /* DEPEND_H */

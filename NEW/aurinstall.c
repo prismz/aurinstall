@@ -16,6 +16,7 @@ int init(struct opts *opts)
         opts->packages_path = "/home/anon/.cache/aurinstall/packages";
         opts->metadata_path = "/home/anon/.cache/aurinstall/metadata.json";
         opts->repo_path     = "/home/anon/.cache/aurinstall/aur-repo.json";
+        opts->root_program  = "sudo";
 
         if (init_repo_data(opts))
                 fatal_err("failed to initialize repos...");
@@ -25,6 +26,7 @@ int init(struct opts *opts)
 
         opts->localdb = alpm_get_localdb(opts->alpm_handle);
         opts->sync_dbs = alpm_get_syncdbs(opts->alpm_handle);
+        opts->installed_packages = alpm_db_get_pkgcache(opts->localdb);
 
         return 0;
 }
@@ -34,8 +36,6 @@ int main(void)
         struct opts opts;
         init(&opts);
 
-        const char *targets[] = { "ungoogled-chromium-bin", NULL };
-        struct deplist *dl = get_targets_dependencies(targets, 1, &opts);
-        dependency_prompt(dl, &opts);
-
+        const char *targets[] = { "qtcreator-git", NULL };
+        install_packages(targets, 1, &opts);
 }

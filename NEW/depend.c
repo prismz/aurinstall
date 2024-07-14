@@ -70,20 +70,11 @@ struct dep *satisfy_dep(const char *depstring, struct opts *opts, bool is_bdep)
 
 bool dep_satisfied(const char *depstring, struct opts *opts)
 {
-        alpm_pkg_t *pkg = alpm_find_dbs_satisfier(opts->alpm_handle, opts->sync_dbs, depstring);
+        alpm_pkg_t *pkg = alpm_find_satisfier(opts->installed_packages, depstring);
         if (pkg == NULL)
-                goto aur;
+                return false;
 
-        const char *name = alpm_pkg_get_name(pkg);
-
-        alpm_pkg_t *installed = alpm_db_get_pkg(opts->localdb, name);
-        if (installed != NULL)
-                return true;
-aur:
-        installed = alpm_db_get_pkg(opts->localdb, depstring);
-        if (installed != NULL)
-                return true;
-        return false;
+        return true;
 }
 
 static int _parse_deplist(json_object *deps, bool bdeps, struct deplist *dl,
@@ -93,8 +84,13 @@ static int _parse_deplist(json_object *deps, bool bdeps, struct deplist *dl,
         for (int i = 0; i < n; i++) {
                 json_object *dep_json = json_object_array_get_idx(deps, i);
                 const char *depstring = json_object_get_string(dep_json);
+
+                if (dep_satisfied(depstring, opts))
+                        continue;
+
                 struct dep *satisfier = satisfy_dep(depstring, opts, bdeps);
 
+                /*
                 bool duplicate = false;
                 for (size_t j = 0; j < dl->n; j++) {
                         if (strcmp(dl->dl[j]->satisfier, satisfier->satisfier) == 0) {
@@ -105,15 +101,17 @@ static int _parse_deplist(json_object *deps, bool bdeps, struct deplist *dl,
 
                 if (duplicate)
                         continue;
+                */
 
                 if (dl->n + 1 > dl->cap) {
                         dl->dl = safe_realloc(dl->dl, sizeof(struct dep *)
                                         * (dl->cap += 32));
                 }
 
-                dl->dl[dl->n++] = satisfier;
                 if (satisfier->is_aur)
                         get_package_dependencies(satisfier->satisfier, dl, opts);
+
+                dl->dl[dl->n++] = satisfier;
         }
 
         return 0;
@@ -136,11 +134,8 @@ int get_package_dependencies(const char *package_name, struct deplist *dl,
 {
         json_object *meta = get_aur_pkg_meta(package_name, opts);
         /* package not in AUR, user should let pacman handle it */
-        if (meta == NULL) {
-                warning("couldn't get dependencies for AUR package %s",
-                                package_name);
-                return 1;
-        }
+        if (meta == NULL)
+                return 0;
 
         json_object *deps_json;   /* dependencies */
         json_object *bdeps_json;  /* build dependencies */
@@ -163,202 +158,56 @@ int get_package_dependencies(const char *package_name, struct deplist *dl,
         return 0;
 }
 
-/* only used in get_pacman_full_targets() */
-static void _parse_pacman_output(const char *cmd, struct deplist *dl, bool is_bdep, struct opts *opts)
+/*
+ * Returns AUR packages to install (in order!)
+ * Sets *n to the number of these AUR packages to install.
+ * Sets deps to all the dependencies that need to be installed,
+ * this is used later to prompt for removal of build dependencies.
+ *
+ * This function exists for cases where an AUR package has AUR dependencies.
+ */
+char **install_dependencies(const char **targets, int n_targets, int *n,
+                struct deplist *deps, struct opts *opts)
 {
-        FILE *fp = popen(cmd, "r");
-        if (!fp)
-                fatal_err("failed to get standard repo dependencies");
+        char **aur_targets = safe_calloc(n_targets * 2, sizeof(char *));
+        int n_aur_targets = 0;
 
-        char buf[1024];
-        while (fgets(buf, 1024, fp) != NULL) {
-                char *repo = NULL;
-                char *name = NULL;
-                char *vers = NULL;
+        size_t dep_cmd_size = 4096;
+        char *dep_cmd = safe_calloc(dep_cmd_size, 1);
+        snprintf(dep_cmd, dep_cmd_size, "%s pacman -S ", opts->root_program);
+        size_t dep_cmd_len = strlen(dep_cmd);
 
-                int i = 0;
-                /* this is a little dumb, but i don't want to use scanf(). */
-                char *bufdup = safe_strdup(buf);
-                char *ptr = strtok(bufdup, " ");
-                while (ptr != NULL && i <= 3) {
-                        switch (i) {
-                        case 0:
-                                repo = safe_strdup(ptr);
-                                ptr = strtok(NULL, " \n");
-                                i++;
-                                break;
-                        case 1:
-                                name = safe_strdup(ptr);
-                                ptr = strtok(NULL, " \n");
-                                i++;
-                                break;
-                        case 2:
-                                vers = safe_strdup(ptr);
-                                ptr = strtok(NULL, " \n");
-                                i++;
-                                break;
-                        default:
-                                break;
-                        }
-                }
-
-
-                struct dep *d = safe_calloc(1, sizeof(struct dep));
-                d->repo = repo;
-                d->depstring = NULL;
-                d->satisfier = name;
-                d->is_aur = false;
-                d->is_bdep = is_bdep;
-                d->is_new_bdep = false;
-                d->vers = vers;
-
-                if (d->is_bdep) {
-                        if (dep_satisfied(name, opts))
-                                d->is_new_bdep = false;
-                        else
-                                d->is_new_bdep = true;
-                }
-
-                /* resize if needed */
-                if (dl->n + 1 > dl->cap) {
-                        dl->dl = safe_realloc(dl->dl, sizeof(struct dep *)
-                                        * (dl->cap += 16));
-                }
-
-                dl->dl[dl->n++] = d;
+        for (int i = 0; i < n_targets; i++) {
+                const char *target = targets[i];
+                get_package_dependencies(target, deps, opts);
         }
 
-        pclose(fp);
-}
-
-/*
- * For all non-aur packages in dl, add them to a query for pacman.
- * Make pacman list all targets (the idea of this is that
- * pacman will resolve further dependencies on its own.
- */
-static struct deplist *get_pacman_full_targets(struct deplist *dl, struct opts *opts)
-{
-        /* we have to separate build dependencies from normal dependencies
-         * entirely and run two separate commands, so we can find what all
-         * the build dependencies are.
-         */
-
-        size_t dep_cmd_size = 2048;
-        char *dep_cmd = safe_calloc(dep_cmd_size, 1);
-        snprintf(dep_cmd, dep_cmd_size, "pacman -p --print-format \"%%r %%n %%v\" -S ");
-        size_t dep_cmd_i = strlen(dep_cmd) - 1;
-
-        size_t bdep_cmd_size = 2048;
-        char *bdep_cmd = safe_calloc(bdep_cmd_size, 1);
-        snprintf(bdep_cmd, bdep_cmd_size, "pacman -p --print-format \"%%r %%n %%v\" -S ");
-        size_t bdep_cmd_i = strlen(bdep_cmd) - 1;
-
-        for (size_t i = 0; i < dl->n; i++) {
-                struct dep *d = dl->dl[i];
-                char *depname = d->satisfier;
-                size_t depname_len = strlen(depname);
-
-                if (d->is_aur)
-                        continue;
-
-                if (d->is_bdep) {
-                        /* resize if needed */
-                        if (bdep_cmd_i + depname_len + 18 >= bdep_cmd_size) {
-                                bdep_cmd = safe_realloc(bdep_cmd,
-                                                bdep_cmd_size
-                                                += (depname_len + 64)
-                                );
-                        }
-
-                        strcat(bdep_cmd, depname);
-                        strcat(bdep_cmd, " ");
+        /* build command to install dependencies */
+        for (size_t i = 0; i < deps->n; i++) {
+                struct dep *dep = deps->dl[i];
+                if (dep->is_aur) {
+                        aur_targets[n_aur_targets++] = dep->satisfier;
                         continue;
                 }
 
-                /* resize if needed */
-                if (dep_cmd_i + depname_len + 18 >= dep_cmd_size)
-                        dep_cmd = safe_realloc(dep_cmd, dep_cmd_size += (depname_len + 64));
+                size_t satisfier_len = strlen(dep->satisfier);
 
-                strcat(dep_cmd, depname);
+                if (dep_cmd_len + satisfier_len + 1 > dep_cmd_size)
+                        dep_cmd = safe_realloc(dep_cmd, dep_cmd_size += 512);
+
+                strcat(dep_cmd, dep->satisfier);
                 strcat(dep_cmd, " ");
         }
 
-        /* redirect error output (sometimes no build dependencies) */
-        strcat(dep_cmd, " 2> /dev/null");
-        strcat(bdep_cmd, " 2> /dev/null");
+        if (n != NULL)
+                *n = n_aur_targets;
 
-        struct deplist *deps = deplist_new(dl->cap);
-        struct deplist *bdeps = deplist_new(dl->cap);
-
-        _parse_pacman_output(dep_cmd, deps, false, opts);
-        _parse_pacman_output(bdep_cmd, bdeps, true, opts);
-
-        struct deplist *full_deps = deplist_new(deps->n + bdeps->n + 12);
-
-        /* no need to bounds check - pre allocated */
-        for (int i = 0; i < deps->n; i++)
-                full_deps->dl[full_deps->n++] = deps->dl[i];
-        for (int i = 0; i < bdeps->n; i++)
-                full_deps->dl[full_deps->n++] = bdeps->dl[i];
-
-        free(deps);
-        free(bdeps);
-
-        return full_deps;
-}
-
-struct deplist *get_targets_dependencies(const char **targets, int n, struct opts *opts)
-{
-        struct deplist *dl = deplist_new(n * 16);
-        for (int i = 0; i < n; i++)
-                get_package_dependencies(targets[i], dl, opts);
-
-        struct deplist *all_repo_deps = get_pacman_full_targets(dl, opts);
-
-        struct deplist *all_deps = deplist_new(dl->n + all_repo_deps->n + 8);
-        for (size_t i = 0; i < dl->n; i++) {
-                struct dep *d = dl->dl[i];
-                if (!d->is_aur)
-                        continue;
-
-                if (!dep_satisfied(d->satisfier, opts)) {
-                        all_deps->dl[all_deps->n++] = d;
-                        continue;
-                }
-
-                free(d->repo);
-                free(d->depstring);
-                free(d->satisfier);
-                free(d);
+        if (system(dep_cmd)) {
+                free(dep_cmd);
+                return NULL;
         }
 
-        for (size_t i = 0; i < all_repo_deps->n; i++) {
-                struct dep *d = all_repo_deps->dl[i];
-                if (!dep_satisfied(d->satisfier, opts)) {
-                        all_deps->dl[all_deps->n++] = d;
-                        continue;
-                }
+        free(dep_cmd);
 
-                free(d->repo);
-                free(d->depstring);
-                free(d->satisfier);
-                free(d);
-        }
-
-        free(dl);
-        free(all_repo_deps);
-
-        return all_deps;
-}
-
-bool dependency_prompt(struct deplist *dl, struct opts *opts)
-{
-        printf("%ld deps\n", dl->n);
-        for (size_t i = 0; i < dl->n; i++) {
-                struct dep *d = dl->dl[i];
-                printf("%s/%s %s", d->repo, d->satisfier, d->vers);
-                printf("\n");
-        }
-
-        return false;
+        return aur_targets;
 }
