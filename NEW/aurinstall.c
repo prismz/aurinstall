@@ -36,6 +36,6 @@ int main(void)
         struct opts opts;
         init(&opts);
 
-        const char *targets[] = { "qtcreator-git", NULL };
-        install_packages(targets, 1, &opts);
+        const char *targets[] = { "qtcreator-git", "librewolf", "osu-lazer-bin", NULL };
+        install_packages(targets, 3, &opts);
 }

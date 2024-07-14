@@ -15,10 +15,6 @@ struct dep {
         bool is_bdep;
         alpm_pkg_t *pkg;
         char *vers;
-
-        /* if bdep was previously installed, we shouldn't remove it even if
-         * the user says yes to remove bdeps after install. */
-        bool is_new_bdep;
 };
 
 struct deplist {
@@ -32,7 +28,7 @@ struct dep *satisfy_dep(const char *depstring, struct opts *opts, bool is_bdep);
 bool dep_satisfied(const char *depstring, struct opts *opts);
 int get_package_dependencies(const char *package_name, struct deplist *dl,
                 struct opts *opts);
-char **install_dependencies(const char **targets, int n_targets, int *n,
+struct deplist *install_dependencies(const char **targets, int n_targets, int *n,
                 struct deplist *deps, struct opts *opts);
 
 #endif  /* DEPEND_H */

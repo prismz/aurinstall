@@ -2,7 +2,7 @@
 #include "requests.h"
 #include "string.h"
 #include "alloc.h"
-#include "data.h"
+#include "util.h"
 #include "options.h"
 
 #include <alpm.h>

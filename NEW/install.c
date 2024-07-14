@@ -5,7 +5,6 @@
 #include "repo.h"
 #include "util.h"
 
-#include <json-c/json_object.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
@@ -25,7 +24,7 @@ int download_package_source(const char *name, struct opts *opts)
         snprintf(download_path, download_path_len, "%s/%s",
                         opts->cache_path, name);
 
-        char *argv[] = { "git", "clone", url, download_path, NULL };
+        char *argv[] = { "git", "clone", "--", url, download_path, NULL };
         if (execvp("git", argv) < 0) {
                 perror("failed to clone");
                 return 1;
@@ -89,8 +88,42 @@ int install_packages(const char **targets, int n, struct opts *opts)
 {
         struct deplist *deps = deplist_new(n * 8);
         int n_aur_targets;
-        if (install_dependencies(targets, n, &n_aur_targets, deps, opts) == NULL)
+
+        struct deplist *aur_targets = install_dependencies(targets, n,
+                        &n_aur_targets, deps, opts);
+        if (aur_targets == NULL)
                 fatal_err("failed to install dependencies");
+
+        /* array of bools for whether build files downloaded */
+        bool files_exist[n_aur_targets];
+        json_object *meta_list[n_aur_targets];
+        size_t longest_name_len = 0;
+
+        for (int i = 0; i < n_aur_targets; i++) {
+                size_t namelen = strlen(aur_targets->dl[i]->satisfier);
+                if (namelen > longest_name_len)
+                        longest_name_len = namelen;
+        }
+
+        for (int i = 0; i < n_aur_targets; i++) {
+                struct dep *d = aur_targets->dl[i];
+                char *target = d->satisfier;
+                char *vers = d->vers;
+
+                files_exist[i] = build_files_exist(target, opts);
+                printf("aur/%s", target);
+
+                size_t namelen = strlen(target);
+
+                for (size_t j = 0; j < longest_name_len - namelen + 2; j++)
+                        printf(" ");
+                printf("%s", vers);
+
+                if (files_exist[i])
+                        printf(" (BUILD FILES EXIST)");
+                printf("\n");
+        }
+
 
         return 0;
 }

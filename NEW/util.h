@@ -9,5 +9,6 @@ void warning(const char *fmt, ...);
 bool dir_exists(const char *path);
 bool dir_is_empty(const char *path);
 char *trim_whitespace(const char *str);
+int gunzip(const char *path);
 
 #endif  /* UTIL_H */

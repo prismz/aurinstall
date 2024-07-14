@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <json-c/json.h>
 
 /* TODO: this could all definitely be improved.
@@ -155,6 +156,18 @@ int get_package_dependencies(const char *package_name, struct deplist *dl,
                         fatal_err("failed to parse build dependencies");
         }
 
+        struct dep *d = safe_calloc(1, sizeof(struct dep *));
+        d->depstring = safe_strdup(package_name);
+        d->satisfier = safe_strdup(d->depstring);
+        d->is_aur = true;
+        d->is_bdep = false;
+        d->repo = NULL;
+
+        if (dl->n + 1 > dl->cap)
+                dl->dl = safe_realloc(dl->dl, sizeof(struct dep *)
+                                * (dl->cap += 8));
+        dl->dl[dl->n++] = d;
+
         return 0;
 }
 
@@ -166,16 +179,11 @@ int get_package_dependencies(const char *package_name, struct deplist *dl,
  *
  * This function exists for cases where an AUR package has AUR dependencies.
  */
-char **install_dependencies(const char **targets, int n_targets, int *n,
+struct deplist *install_dependencies(const char **targets, int n_targets, int *n,
                 struct deplist *deps, struct opts *opts)
 {
-        char **aur_targets = safe_calloc(n_targets * 2, sizeof(char *));
+        struct deplist *aur_targets = deplist_new(n_targets * 2);
         int n_aur_targets = 0;
-
-        size_t dep_cmd_size = 4096;
-        char *dep_cmd = safe_calloc(dep_cmd_size, 1);
-        snprintf(dep_cmd, dep_cmd_size, "%s pacman -S ", opts->root_program);
-        size_t dep_cmd_len = strlen(dep_cmd);
 
         for (int i = 0; i < n_targets; i++) {
                 const char *target = targets[i];
@@ -183,31 +191,76 @@ char **install_dependencies(const char **targets, int n_targets, int *n,
         }
 
         /* build command to install dependencies */
+        size_t argv_size = 2048;
+        char **argv = safe_calloc(argv_size, sizeof(char *));
+        argv[0] = opts->root_program;
+        argv[1] = "pacman";
+        argv[2] = "-S";
+        argv[3] = "--asdeps";
+        argv[4] = "--";
+        size_t argv_i = 5;
+
         for (size_t i = 0; i < deps->n; i++) {
                 struct dep *dep = deps->dl[i];
                 if (dep->is_aur) {
-                        aur_targets[n_aur_targets++] = dep->satisfier;
+                        if (aur_targets->n + 1 > aur_targets->cap)
+                                aur_targets->dl = safe_realloc(aur_targets->dl,
+                                                (aur_targets->cap += 8));
+
+                        aur_targets->dl[n_aur_targets++] = dep;
                         continue;
                 }
 
-                size_t satisfier_len = strlen(dep->satisfier);
+                if (argv_i + 1 > argv_size)
+                        argv = safe_realloc(argv, sizeof(char *) *
+                                        (argv_size += 512));
 
-                if (dep_cmd_len + satisfier_len + 1 > dep_cmd_size)
-                        dep_cmd = safe_realloc(dep_cmd, dep_cmd_size += 512);
+                argv[argv_i++] = dep->satisfier;
+        }
 
-                strcat(dep_cmd, dep->satisfier);
-                strcat(dep_cmd, " ");
+        if (argv_i == 5) {
+                for (int i = 0; i < n_targets; i++) {
+                        struct dep *d = safe_calloc(1, sizeof(struct dep));
+                        d->satisfier = safe_strdup(targets[i]);
+                        d->depstring = NULL;
+                        d->is_aur = true;
+                        d->repo = NULL;
+                        json_object *meta = get_aur_pkg_meta(targets[i], opts);
+
+                        json_object *vers_json;
+                        json_object_object_get_ex(meta, "Version", &vers_json);
+                        const char *vers = json_object_get_string(vers_json);
+
+                        d->vers = safe_strdup(vers);
+
+                        if (aur_targets->n + 1 > aur_targets->cap) {
+                                aur_targets->dl = safe_realloc(aur_targets->dl,
+                                                sizeof(struct dep) * (aur_targets->n += 8));
+                        }
+
+                        aur_targets->dl[aur_targets->n++] = d;
+                }
+
+                *n = n_targets;
+                return aur_targets;
         }
 
         if (n != NULL)
-                *n = n_aur_targets;
+                *n = aur_targets->n;
 
-        if (system(dep_cmd)) {
-                free(dep_cmd);
-                return NULL;
+        if (fork() == 0) {
+                if (execvp(opts->root_program, argv) < 0) {
+                        return NULL;
+                }
+        } else {
+                int ret;
+                wait(&ret);
+                if (ret != 0)
+                        return NULL;
+
+
+                return aur_targets;
         }
-
-        free(dep_cmd);
 
         return aur_targets;
 }
