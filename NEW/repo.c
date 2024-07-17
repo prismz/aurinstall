@@ -10,10 +10,10 @@
 #include <time.h>
 #include <json-c/json.h>
 
-static json_object *get_formatted_repo_data(struct opts *opts)
+static json_object *get_formatted_repo_data(void)
 {
-        char *pkg_list_path = opts->packages_path;
-        char *pkg_meta_path = opts->metadata_path;
+        char *pkg_list_path = packages_path;
+        char *pkg_meta_path = metadata_path;
 
         FILE *list_fp = fopen(pkg_list_path, "rb");
         json_object *metadata = json_object_from_file(pkg_meta_path);
@@ -70,10 +70,10 @@ static json_object *get_formatted_repo_data(struct opts *opts)
         return formatted_repodata;
 }
 
-int download_repos(struct opts *opts)
+int download_repos(void)
 {
-        char *listpath = opts->packages_path;
-        char *metapath = opts->metadata_path;
+        char *listpath = packages_path;
+        char *metapath = metadata_path;
 
         printf("Downloading repos...\n");
 
@@ -99,40 +99,40 @@ int download_repos(struct opts *opts)
         if (rc1 || rc2)
                 return 2;
 
-        json_object *formatted_repodata = get_formatted_repo_data(opts);
+        json_object *formatted_repodata = get_formatted_repo_data();
 
-        if (json_object_to_file(opts->repo_path, formatted_repodata) < 0)
+        if (json_object_to_file(repo_path, formatted_repodata) < 0)
                 return 3;
 
         return 0;
 }
 
-int init_repo_data(struct opts *opts)
+int init_repo_data(void)
 {
-        json_object *j = json_object_from_file(opts->repo_path);
+        json_object *j = json_object_from_file(repo_path);
         if (j == NULL) {
                 printf("failed to read repos, redownloading...\n");
                 /* couldn't read repo file */
-                if (download_repos(opts)) {
+                if (download_repos()) {
                         fprintf(stderr, "failed to re-download repos.\n");
                         return 1;
                 }
-                j = json_object_from_file(opts->repo_path);
+                j = json_object_from_file(repo_path);
                 if (j == NULL) {
                         fprintf(stderr, "failed to parse newly downloaded repos. possible serverside issue?\n");
                         return 1;
                 }
         }
 
-        opts->repo_data = j;
+        repo_data = j;
 
         return 0;
 }
 
-json_object *get_aur_pkg_meta(const char *name, struct opts *opts)
+json_object *get_aur_pkg_meta(const char *name)
 {
         json_object *meta;
-        json_bool exists = json_object_object_get_ex(opts->repo_data,
+        json_bool exists = json_object_object_get_ex(repo_data,
                         name, &meta);
         if (!exists)
                 return NULL;

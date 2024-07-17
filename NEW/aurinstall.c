@@ -10,32 +10,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-int init(struct opts *opts)
-{
-        opts->cache_path    = "/home/anon/.cache/aurinstall/";
-        opts->packages_path = "/home/anon/.cache/aurinstall/packages";
-        opts->metadata_path = "/home/anon/.cache/aurinstall/metadata.json";
-        opts->repo_path     = "/home/anon/.cache/aurinstall/aur-repo.json";
-        opts->root_program  = "sudo";
-
-        if (init_repo_data(opts))
-                fatal_err("failed to initialize repos...");
-
-        if (read_opts_from_config(opts))
-                fatal_err("libalpm error");
-
-        opts->localdb = alpm_get_localdb(opts->alpm_handle);
-        opts->sync_dbs = alpm_get_syncdbs(opts->alpm_handle);
-        opts->installed_packages = alpm_db_get_pkgcache(opts->localdb);
-
-        return 0;
-}
-
 int main(void)
 {
-        struct opts opts;
-        init(&opts);
+        if (init())
+                fatal_err("failed to initialize");
 
         const char *targets[] = { "qtcreator-git", "librewolf", "osu-lazer-bin", NULL };
-        install_packages(targets, 3, &opts);
+        install_packages(targets, 3);
 }

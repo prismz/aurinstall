@@ -6,8 +6,8 @@
 #include <stdbool.h>
 #include <json-c/json.h>
 
-int download_package_source(const char *name, struct opts *opts);
-bool build_files_exist(const char *name, struct opts *opts);
-int install_packages(const char **targets, int n, struct opts *opts);
+int download_package_source(const char *name);
+bool build_files_exist(const char *name);
+int install_packages(const char **targets, int n);
 
 #endif  /* INSTALL_H */

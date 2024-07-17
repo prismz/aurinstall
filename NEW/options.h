@@ -4,23 +4,17 @@
 #include <json-c/json.h>
 #include <alpm.h>
 
-struct opts {
-        char *cache_path;
-        char *packages_path;
-        char *metadata_path;
-        char *repo_path;
-        char *root_program;  /* sudo/doas/other */
-        json_object *repo_data;
+extern char *cache_path;
+extern char *packages_path;
+extern char *metadata_path;
+extern char *repo_path;
+extern char *root_program;  /* sudo/doas/other */
+extern json_object *repo_data;
+extern alpm_handle_t *alpm_handle;
+extern alpm_list_t *sync_dbs;
+extern alpm_db_t *localdb;
+extern alpm_list_t *installed_packages;
 
-        /* ALPM */
-        alpm_handle_t *alpm_handle;
-        alpm_list_t *sync_dbs;
-        alpm_db_t *localdb;
-
-        alpm_list_t *installed_packages;
-};
-
-int read_opts_from_config(struct opts *opts);
-int parse_pacman_opts(struct opts *opts);
+int init(void);
 
 #endif  /* OPTIONS_H */
