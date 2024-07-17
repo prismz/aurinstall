@@ -136,8 +136,6 @@ static void install_prompt(struct deplist *aur_targets, bool *files_exist)
 /*
  * Main function used to install packages.
  *
- * Will print packages, prompts for which packages to exclude
- * Prompts to install other AUR dependencies if needed
  * Asks to show diff (if build files exist) or MAKEPKG (if they don't)
  * Prints all GPG keys and prompts for importing
  */

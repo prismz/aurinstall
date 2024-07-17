@@ -244,7 +244,6 @@ struct deplist *install_dependencies(const char **targets, int n)
         if (pid == -1) {
                 fatal_err("failed to fork()");
         } else if (pid > 0) {
-                printf("waiting\n");
                 int ret;
                 waitpid(pid, &ret, 0);
                 if (ret != 0)
