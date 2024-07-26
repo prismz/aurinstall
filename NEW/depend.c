@@ -135,8 +135,10 @@ static int parse_bdeplist(json_object *deps, struct deplist *dl)
         return _parse_deplist(deps, true, dl);
 }
 
+/* package sources must be installed */
 int get_package_dependencies(const char *package_name, struct deplist *dl)
 {
+        /* TODO: remove meta file and clone packages and parse srcinfo instead */
         json_object *meta = get_aur_pkg_meta(package_name);
         /* package not in AUR, user should let pacman handle it */
         if (meta == NULL)
@@ -164,6 +166,9 @@ int get_package_dependencies(const char *package_name, struct deplist *dl)
 }
 
 /*
+ * All targets should already be cloned.
+ * Will clone AUR dependencies if needed.
+ *
  * Returns AUR packages to install (in order!)
  * Sets *n to the number of these AUR packages to install.
  * Sets deps to all the dependencies that need to be installed,

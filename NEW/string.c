@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 /* all functions have undefined behavior if argument is NULL */
 
@@ -78,3 +79,37 @@ char *path_remove_extension(const char *path)
         strncpy(buf, path, i);
         return buf;
 }
+
+char *trim_whitespace(const char *str)
+{
+        if (str == NULL)
+                return NULL;
+
+        size_t trimmed_len;
+        char *trimmed;
+        int ti = 0;
+
+        int len = (int)strlen(str);
+        int start;
+        int end = 0;
+        for (start = 0; isspace(str[start]); start++);
+        if (start == len)
+                goto done;
+
+        for (end = len - 1; end >= 0; end--) {
+                if (!isspace(str[end]))
+                        break;
+        }
+        end++;
+
+done:
+        trimmed_len = abs(end - start) + 1;
+        trimmed = safe_calloc(trimmed_len, 1);
+        for (int i = start; i < end; i++) {
+                trimmed[ti++] = str[i];
+        }
+
+        return trimmed;
+}
+
+

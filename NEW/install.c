@@ -2,8 +2,8 @@
 #include "options.h"
 #include "alloc.h"
 #include "depend.h"
-#include "repo.h"
 #include "util.h"
+#include "srcinfo.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -152,12 +152,21 @@ int install_packages(const char **targets, int n)
         bool files_exist[n_aur_targets];
         install_prompt(aur_targets, files_exist);
 
+        /* download all sources */
         for (int i = 0; i < n_aur_targets; i++) {
                 struct dep *target = aur_targets->dl[i];
                 bool need_download = !files_exist[i];
                 if (need_download)
                         download_package_source(target->satisfier);
+        }
 
+        printf("Importing PGP keys...\n");
+        /* parse and import PGP keys */
+        for (int i = 0; i < n_aur_targets; i++) {
+                /* TODO: make keys->from not redundant, use one big list of keys
+                 * that we can then print through */
+                struct dep *target = aur_targets->dl[i];
+                struct pgp_keylist *keys = get_pgp_keys(target->satisfier);
         }
 
         return 0;

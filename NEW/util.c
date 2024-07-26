@@ -89,38 +89,6 @@ bool dir_is_empty(const char *path)
         return 0;
 }
 
-char *trim_whitespace(const char *str)
-{
-        if (str == NULL)
-                return 0;
-
-        size_t trimmed_len;
-        char *trimmed;
-        int ti = 0;
-
-        int len = (int)strlen(str);
-        int start;
-        int end = 0;
-        for (start = 0; isspace(str[start]); start++);
-        if (start == len)
-                goto done;
-
-        for (end = len - 1; end >= 0; end--) {
-                if (!isspace(str[end]))
-                        break;
-        }
-        end++;
-
-done:
-        trimmed_len = abs(end - start) + 1;
-        trimmed = safe_calloc(trimmed_len, 1);
-        for (int i = start; i < end; i++) {
-                trimmed[ti++] = str[i];
-        }
-
-        return trimmed;
-}
-
 static bool is_integer(char *str)
 {
         if (str == NULL)
@@ -203,44 +171,18 @@ void integer_exclude_prompt(char *prompt, int *flags_array, int size)
         free(input_raw);
 }
 
-int gunzip(const char *path)
+char *path_join(const char *p1, const char *p2)
 {
-        if (path == NULL)
-                return 1;
+        if (p1 == NULL || p2 == NULL)
+                return NULL;
 
-        char *new_path = path_remove_extension(path);
-        printf("gunzip %s to %s\n", path, new_path);
+        size_t p1_len = strlen(p1);
+        size_t p2_len = strlen(p2);
 
-        FILE *fp = fopen(new_path, "wb+");
-        if (!fp)
-                return 1;
+        char *combined = safe_calloc(p1_len + p2_len + 128, 1);
+        strcat(combined, p1);
+        strcat(combined, "/");
+        strcat(combined, p2);
 
-        gzFile file = gzopen(path, "r");
-        if (!file)
-                return 1;
-
-        for (;;) {
-                unsigned char buff[2048];
-                int nread = gzread(file, buff, 2047);
-                fwrite(buff, nread, 1, fp);
-                buff[nread] = 0;
-
-                if (nread > 2047)
-                        continue;
-
-                int err;
-                const char *err_str = gzerror(file, &err);
-                if (err) {
-                        fprintf(stderr, "Error: %s\n", err_str);
-                        return 1;
-                }
-                if (gzeof(file))
-                        break;
-        }
-
-        gzclose(file);
-        fclose(fp);
-        free(new_path);
-
-        return 0;
+        return combined;
 }
