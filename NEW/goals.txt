@@ -1,0 +1,58 @@
+General:
+- download the AUR metadata like pacman does repositories, and simply filter
+through it on disk. This would likely be faster.
+- maybe in the future we could multithread certain tasks? (cloning)
+- setup wizard to generate config file?
+
+Installation:
+- Search for each package in the AUR database
+        - if not found, use libalpm to check if a valid package
+        - if found, parse dependencies and add all AUR dependencies to list,
+                parse recursively.
+- Use a list of structs with various tags to store information about
+        the dependencies.
+- Prompt the user, if they say yes dependencies from the AUR will be installed
+        automatically
+- Each explicit target should have a list of these dependencies,
+        so each package can be built in order.
+- For each package, compile all AUR build dependencies.
+        - if fail, prompt user (repeat prompt until they select exit, so they can do multiple things)
+                A. go to the build directory and fix it themselves
+                B. remove unneeded build dependencies/dependencies
+                C. attempt a clean build
+                D. skip the parent package (package that has the package that failed to build as a dependency)
+                E. exit program
+- Once all build dependencies are built, install them (along with all repo dependencies)
+        with --noconfirm
+                - If this command fails, assume that the user has a conflicting package
+                installed (e.g. glibc-eac vs glibc), as the prompt to replace defaults to "no".
+                Re-prompt the user. If this also fails, exit the program with a proper
+                error message.
+- Then we can begin building the packages themselves.
+        - if fail, same thing as above.
+- install them all at the end with --noconfirm
+
+NOTES:
+- noconfirm is dangerous... find a better way
+        - (maybe) better way found: prompt the user at the start.
+                - if they ask
+                for prompting, then install all build dependencies and everything at once,
+                then build packages and install them all at once.
+                - if not, then
+                install build dependencies and dependencies per-package
+                (in case anything fails and the user quits,
+                there won't be un-needed dependencies installed)
+
+
+Searching:
+- same way as older program, I can't really think of a way to search the JSON
+        file as fast as one HTTP request to the AUR RPC. This may complicate
+        the program a little but should be faster.
+
+Updating:
+- re-download the AUR database (prevent the user from downloading it more than
+        a certain number of times per day)
+- for each installed AUR package, get the corresponding metadata and compare
+        the versions. if they are different, flag to update.
+- show a nice update prompt.
+

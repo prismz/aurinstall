@@ -1,18 +1,16 @@
 #include "install.h"
 #include "options.h"
-#include "alloc.h"
-#include "depend.h"
-#include "util.h"
-#include "srcinfo.h"
+#include "util/util.h"
+#include "util/target.h"
+#include "util/alloc.h"
 
-#include <unistd.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/wait.h>
-#include <alpm.h>
-#include <json-c/json.h>
 
-int download_package_source(const char *name)
+static int clone(const char *name)
 {
         size_t url_size = strlen(name) + 64;
         char *url = safe_calloc(url_size, 1);
@@ -44,23 +42,7 @@ int download_package_source(const char *name)
         return 0;
 }
 
-/*
- * package sources must already be downloaded.
- * THIS WILL NOT PROMPT FOR ANYTHING
- */
-static int build_package(const char *name)
-{
-        json_object *package_data;
-        json_object_object_get_ex(repo_data, name, &package_data);
-
-        /* not an aur package */
-        if (package_data == NULL)
-                return 1;
-
-        return 0;
-}
-
-bool build_files_exist(const char *name)
+static bool build_files_exist(const char *name)
 {
         if (!dir_exists(cache_path))
                 return false;
@@ -84,90 +66,204 @@ bool build_files_exist(const char *name)
         return true;
 }
 
-static void install_prompt(struct deplist *aur_targets, bool *files_exist)
+static int update_build_files(const char *name)
 {
-        size_t longest_name_len = 0;
-        size_t longest_vers_len = 0;
-        int n = aur_targets->n;
+        if (!dir_exists(cache_path))
+                return 1;
 
-        for (int i = 0; i < n; i++) {
-                struct dep *target = aur_targets->dl[i];
-                if (target == NULL)
-                        continue;
+        if (!build_files_exist(name))
+                return clone(name);
 
-                size_t namelen = strlen(target->satisfier);
-                size_t verslen = strlen(target->vers);
-                if (namelen > longest_name_len)
-                        longest_name_len = namelen;
-                if (verslen > longest_vers_len)
-                        longest_vers_len = verslen;
+        size_t build_path_len = strlen(name) + strlen(cache_path) + 16;
+        char *build_path = safe_calloc(build_path_len, 1);
+        snprintf(build_path, build_path_len, "%s/%s", cache_path, name);
+
+        if (chdir(build_path) < 0) {
+                free(build_path);
+                return 1;
         }
 
-        for (int i = 0; i < n; i++) {
-                struct dep *d = aur_targets->dl[i];
-                char *target = d->satisfier;
-                char *vers = d->vers;
+        char *argv[] = { "git", "pull", "--", NULL };
 
-                files_exist[i] = build_files_exist(target);
-                printf("aur/%s", target);
+        pid_t pid = fork();
+        if (pid == -1) {
+                fatal_err("failed to fork");
+        } else if (pid > 0) {
+                int ret;
+                waitpid(pid, &ret, 0);
+                if (ret != 0)
+                        fatal_err("failed to update package sources");
 
-                size_t namelen = strlen(target);
-                size_t verslen = strlen(vers);
-
-                for (size_t j = 0; j < longest_name_len - namelen + 2; j++)
-                        printf(" ");
-                printf("%s", vers);
-
-                for (size_t j = 0; j < longest_vers_len - verslen + 2; j++)
-                        printf(" ");
-
-                if (d->is_explicit)
-                        printf(" (EXPLICIT)  ");
-                else
-                        printf(" (DEPENDENCY)");
-
-                if (files_exist[i])
-                        printf(" (BUILD FILES EXIST)");
-
-                printf("\n");
-        }
-}
-
-/*
- * Main function used to install packages.
- *
- * Asks to show diff (if build files exist) or MAKEPKG (if they don't)
- * Prints all GPG keys and prompts for importing
- */
-int install_packages(const char **targets, int n)
-{
-        printf("Installing dependencies...\n");
-        struct deplist *aur_targets = install_dependencies(targets, n);
-        int n_aur_targets = aur_targets->n;
-
-        if (aur_targets == NULL)
-                fatal_err("failed to install dependencies");
-
-        /* array of bools for whether build files downloaded */
-        bool files_exist[n_aur_targets];
-        install_prompt(aur_targets, files_exist);
-
-        /* download all sources */
-        for (int i = 0; i < n_aur_targets; i++) {
-                struct dep *target = aur_targets->dl[i];
-                bool need_download = !files_exist[i];
-                if (need_download)
-                        download_package_source(target->satisfier);
-        }
-
-        printf("Importing PGP keys...\n");
-        /* parse and import PGP keys */
-        for (int i = 0; i < n_aur_targets; i++) {
-                /* TODO: make keys->from not redundant, use one big list of keys
-                 * that we can then print through */
-                struct dep *target = aur_targets->dl[i];
-                struct pgp_keylist *keys = get_pgp_keys(target->satisfier);
+                return 0;
+        } else {
+                execvp("git", argv);
+                fatal_err("failed to update package sources");
         }
 
         return 0;
+
+}
+
+int clone_sources(struct target_list *targets)
+{
+        if (targets == NULL)
+                return 1;
+        if (targets->n < 1)
+                return 0;
+
+        for (int i = 0; i < targets->n; i++) {
+                struct target *target = targets->targets[i];
+                if (target->in_repos)
+                        continue;
+                struct target_list *deps = target->dependencies;
+                if (clone_sources(deps))
+                        return 2;
+
+                if (!build_files_exist(target->name)) {
+                        printf("Downloading sources for package %s\n",
+                                        target->name);
+                        if (clone(target->name))
+                                return 3;
+                } else {
+                        printf("Updating sources for package %s\n",
+                                        target->name);
+                        if (update_build_files(target->name))
+                                return 4;
+                }
+        }
+
+        return 0;
+}
+
+/* doesn't recursively evaluate&build AUR dependencies, this is done by
+ * build_and_install_dependencies() */
+int install_repo_dependencies(struct target *target)
+{
+        if (target == NULL)
+                return 1;
+        if (target->dependencies->n == 0)
+                return 0;
+
+        char **argv = safe_calloc(target->dependencies->n + 8, sizeof(char *));
+        argv[0] = root_program;
+        argv[1] = "pacman";
+        argv[2] = "-S";
+        argv[3] = "--";
+
+        int argv_i = 4;
+
+        for (int i = 0; i < target->dependencies->n; i++) {
+                struct target *dependency = target->dependencies->targets[i];
+
+                /* skip AUR, this should be handled by build_and_install_dependencies() */
+                if (!dependency->in_repos)
+                        continue;
+
+                argv[argv_i++] = dependency->name;
+        }
+        argv[argv_i] = NULL;
+
+        pid_t pid = fork();
+        if (pid == -1) {
+                fatal_err("failed to fork");
+        } else if (pid > 0) {
+                int ret;
+                waitpid(pid, &ret, 0);
+                if (ret != 0)
+                        fatal_err("failed to install repo dependencies");
+
+                return 0;
+        } else {
+                execvp(root_program, argv);
+                fatal_err("failed to install repo dependencies");
+        }
+
+        return 0;
+}
+
+/* just executes but properly handles fork() */
+int exec_makepkg(void)
+{
+        char *argv[] = { "makepkg", "-s", "--", NULL };
+
+        pid_t pid = fork();
+        if (pid == -1) {
+                fatal_err("failed to fork");
+        } else if (pid > 0) {
+                int ret;
+                waitpid(pid, &ret, 0);
+                if (ret != 0)
+                        fatal_err("makepkg failed");
+
+                return 0;
+        } else {
+                execvp(root_program, argv);
+                fatal_err("makepkg failed");
+        }
+
+        return 0;
+}
+
+/* TODO: handle pacman packages as well */
+int build_and_install_dependencies(struct target_list *targets)
+{
+        if (targets == NULL)
+                return 1;
+
+        size_t n_install_dirs = 0;
+        size_t install_dirs_cap = 32;
+        char **install_dirs = safe_calloc(install_dirs_cap, sizeof(char *));
+
+        for (int i = 0; i < targets->n; i++) {
+                struct target *target = targets->targets[i];
+                if (target->dependencies->n != 0) {
+                        install_repo_dependencies(target);
+                        build_and_install_dependencies(target->dependencies);
+                }
+
+                for (int j = 0; j < target->dependencies->n; j++) {
+                        struct target *depend = target->dependencies->targets[j];
+                        if (depend->in_repos)
+                                continue;
+
+                        char *depend_path = path_join(cache_path, depend->name);
+
+                        if (chdir(depend_path) < 0)
+                                fatal_err("failed to cd into directory %s", depend_path);
+
+                        if (exec_makepkg())
+                                fatal_err("makepkg failed");
+
+                        if (n_install_dirs + 1 > install_dirs_cap) {
+                                install_dirs = safe_realloc(install_dirs,
+                                                (install_dirs_cap += 8) *
+                                                sizeof(char *));
+                        }
+
+                        install_dirs[n_install_dirs++] = depend_path;
+
+                }
+        }
+
+        for (size_t i = 0; i < n_install_dirs; i++) {
+                char *dir = install_dirs[i];
+        }
+}
+
+/* TODO: .SRCINFO parsing, ability to view PKGBUILDs, color, better prompting */
+int install_packages(char **targets, int n)
+{
+        if (targets == NULL)
+                return 1;
+
+        struct target_list *all_targets = get_target_list(targets, n);
+        target_list_print(all_targets, 0);
+        bool confirmed = yesno_prompt("install these packages?", true);
+        if (!confirmed)
+                return 0;
+
+        printf("Downloading sources...\n");
+        clone_sources(all_targets);
+
+        printf("Recursively building AUR dependencies...\n");
 }

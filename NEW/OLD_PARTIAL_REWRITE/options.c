@@ -1,6 +1,6 @@
 #include "options.h"
-#include "util/repo.h"
-#include "util/util.h"
+#include "repo.h"
+#include "util.h"
 
 #include <pacutils.h>
 #include <alpm.h>
@@ -34,7 +34,7 @@ int init()
 {
         cache_path    = "/home/anon/.cache/aurinstall/";
         packages_path = "/home/anon/.cache/aurinstall/packages";
-        repo_path     = "/home/anon/.cache/aurinstall/aur-repo.json";
+        repo_path     = packages_path;
         metadata_path = "/home/anon/.cache/aurinstall/metadata";
         root_program  = "sudo";
 

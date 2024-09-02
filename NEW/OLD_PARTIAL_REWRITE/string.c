@@ -6,10 +6,68 @@
 #include <stdbool.h>
 #include <ctype.h>
 
-/* all functions have undefined behavior if argument is NULL */
+struct stringlist *stringlist_new(size_t cap)
+{
+        struct stringlist *list = safe_calloc(1, sizeof(struct stringlist));
+
+        list->cap = cap;
+        list->n = 0;
+        list->list = safe_calloc(cap, sizeof(char *));
+
+        return list;
+}
+
+void stringlist_free(struct stringlist *list)
+{
+        if (list == NULL)
+                return;
+
+        if (list->list == NULL)
+                goto end;
+        for (size_t i = 0; i < list->n; i++) {
+                free(list->list[i]);
+        }
+        free(list->list);
+end:
+        free(list);
+}
+
+/*
+ * returns index where string was added, in list->list
+ * returns -1 on error
+ */
+int stringlist_append(struct stringlist *list, const char *str)
+{
+        if (str == NULL)
+                return -1;
+
+        if (list->n + 1 > list->cap) {
+                list->list = safe_realloc(list->list,
+                                (list->cap += 8) * sizeof(char *));
+        }
+
+        list->list[list->n++] = safe_strdup(str);
+
+        return list->n - 1;
+}
+
+/* adds all of src to dest */
+int stringlist_concat(struct stringlist *dest, const struct stringlist *src)
+{
+        for (size_t i = 0; i < src->n; i++) {
+                int rc = stringlist_append(dest, src->list[i]);
+                if (rc)
+                        return 1;
+        }
+
+        return 0;
+}
 
 bool string_endswith(const char *str, const char *with)
 {
+        if (str == NULL || with == NULL)
+                return false;
+
         int len = (int)strlen(str);
         int with_len = (int)strlen(with);
 
@@ -32,6 +90,9 @@ bool string_endswith(const char *str, const char *with)
 
 bool string_startswith(const char *str, const char *with)
 {
+        if (str == NULL || with == NULL)
+                return false;
+
         if (strncmp(str, with, strlen(with)) == 0)
                 return true;
         return false;
@@ -39,6 +100,9 @@ bool string_startswith(const char *str, const char *with)
 
 int first_char_idx(const char *str, char c)
 {
+        if (str == NULL)
+                return -1;
+
         size_t len = strlen(str);
         for (size_t i = 0; i < len; i++) {
                 if (str[i] == c)
@@ -111,5 +175,3 @@ done:
 
         return trimmed;
 }
-
-

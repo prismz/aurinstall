@@ -23,11 +23,11 @@ LDFLAGS += -lpacutils
 
 all:opts prod
 
-prod:opts
-	$(CC) *.c util/*.c $(PRODCFLAGS) $(LDFLAGS) $(CFLAGS) -o aurinstall
+prod:
+	$(CC) *.c $(PRODCFLAGS) $(LDFLAGS) $(CFLAGS) -o aurinstall
 
 debug:opts
-	$(CC) *.c util/*.c $(DEBUGCFLAGS) $(LDFLAGS) $(CFLAGS) -o aurinstall
+	$(CC) *.c $(DEBUGCFLAGS) $(LDFLAGS) $(CFLAGS) -o aurinstall
 
 install:prod
 	cp -r aurinstall $(DESTDIR)
