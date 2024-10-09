@@ -102,6 +102,31 @@ TargetList *targetlist_new(size_t capacity)
         return tl;
 }
 
+void target_free(Target *t)
+{
+        if (t == NULL)
+                return;
+        free(t->name);
+        free(t->desc);
+        free(t->version);
+
+        targetlist_free(t->depends);
+        targetlist_free(t->makedepends);
+
+        free(t);
+}
+
+void targetlist_free(TargetList *tl)
+{
+        if (tl == NULL)
+                return;
+
+        for (size_t i = 0; i < tl->n; i++)
+                target_free(tl->targets[i]);
+        free(tl->targets);
+        free(tl);
+}
+
 int targetlist_append(TargetList *tl, Target *t)
 {
         if (tl == NULL || tl->targets == NULL || t == NULL)
@@ -159,6 +184,29 @@ json_object *package_get_metadata(const char *name)
                 return NULL;
 
         return result;
+}
+
+TargetList *get_full_targets(const char **names, int n)
+{
+        if (names == NULL || n < 1)
+                return NULL;
+
+        TargetList *tl = targetlist_new(n);
+
+        for (int i = 0; i < n; i++) {
+                const char *name = names[i];
+                if (name == NULL)
+                        break;
+
+                Target *t = target_new(name);
+
+                if (targetlist_append(tl, t)) {
+                        targetlist_free(tl);
+                        return NULL;
+                }
+        }
+
+        return tl;
 }
 
 int main(void)
