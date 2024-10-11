@@ -3,6 +3,7 @@
 #include "alloc.h"
 #include "string.h"
 #include "requests.h"
+#include "fastdeps.h"
 #include "../options.h"
 
 #include <alpm.h>
@@ -10,97 +11,53 @@
 #include <time.h>
 #include <json-c/json.h>
 
-static json_object *get_formatted_repo_data(void)
+json_object *format_repo(const char *path)
 {
-        char *pkg_list_path = packages_path;
-        char *pkg_meta_path = metadata_path;
-
-        FILE *list_fp = fopen(pkg_list_path, "rb");
-        json_object *metadata = json_object_from_file(pkg_meta_path);
-
-        if (!list_fp)
+        json_object *unformatted = json_object_from_file(path);
+        if (unformatted == NULL)
                 return NULL;
+        size_t unformatted_n = json_object_array_length(unformatted);
 
-        json_object *formatted_repodata = json_object_new_object();
+        json_object *formatted = json_object_new_object();
+        for (size_t i = 0; i < unformatted_n; i++) {
+                json_object *ent = json_object_array_get_idx(unformatted, i);
 
-        int resultcount = json_object_array_length(metadata);
-        json_object_object_add(formatted_repodata, "resultcount",
-                        json_object_new_int64(resultcount));
-
-        time_t current_time = time(NULL);
-        json_object_object_add(formatted_repodata, "lastsync",
-                        json_object_new_int64(current_time));
-
-        struct tm lt;
-        char human_time[128];
-        localtime_r(&current_time, &lt);
-
-        if (strftime(human_time, sizeof(human_time), "%x %X", &lt) == 0) {
-                fprintf(stderr, "strftime error\n");
-                return NULL;
-        }
-
-        printf("setting last sync time to %s\n", human_time);
-
-        char *name_buffer = safe_calloc(512, 1);
-        size_t i = 0;
-        while (fgets(name_buffer, 512, list_fp) != NULL) {
-                json_object *curr_metadata = json_object_array_get_idx(metadata, i);
                 json_object *name_json;
-                json_object_object_get_ex(curr_metadata, "Name", &name_json);
+                json_object_object_get_ex(ent, "Name", &name_json);
+                if (name_json == NULL)
+                        continue;
                 const char *name = json_object_get_string(name_json);
 
-                // remove newline from fgets()
-                name_buffer[strlen(name_buffer) - 1] = 0;
+                json_object_object_add(formatted, name, ent);
+        }
 
-                if (strcmp(name, name_buffer) != 0) {
-                        printf("ERROR: metadata mismatch: %s -> %s", name_buffer, name);
-                        continue;
-                }
+        if (json_object_to_file(path, formatted))
+                return NULL;
 
-                json_object_object_add(
-                                formatted_repodata,
-                                name,
-                                curr_metadata
-                );
+        repo_data = formatted;
 
-                i++;
-        };
-
-        return formatted_repodata;
+        return formatted;
 }
 
 int download_repos(void)
 {
-        char *listpath = packages_path;
-        char *metapath = metadata_path;
-
         printf("Downloading repos...\n");
 
-        const char *package_list_url = "https://aur.archlinux.org/packages.gz";
-        const char *package_meta_url = "https://aur.archlinux.org/packages-meta-ext-v1.json.gz";
+        const char *db_url = "https://aur.archlinux.org/packages-meta-ext-v1.json.gz";
 
-        size_t pkg_list_path_size = strlen(listpath) + 12;
-        size_t pkg_meta_path_size = strlen(metapath) + 12;
+        size_t repo_gz_path_len = strlen(repo_path) + 12;
+        char *repo_gz_path = safe_calloc(repo_gz_path_len, 1);
+        snprintf(repo_gz_path, repo_gz_path_len, "%s.gz", repo_path);
 
-        char *pkg_list_gz_path = safe_calloc(pkg_list_path_size, 1);
-        char *pkg_meta_gz_path = safe_calloc(pkg_meta_path_size, 1);
-
-        snprintf(pkg_list_gz_path, pkg_list_path_size, "%s.gz", listpath);
-        snprintf(pkg_meta_gz_path, pkg_meta_path_size, "%s.gz", metapath);
-
-        int rc1 = download_to_file(package_list_url, pkg_list_gz_path);
-        int rc2 = download_to_file(package_meta_url, pkg_meta_gz_path);
-
-        if (rc1 || rc2)
+        int rc1 = download_to_file(db_url, repo_gz_path);
+        if (rc1)
                 return rc1;
-        rc1 = gunzip(pkg_list_gz_path);
-        rc2 = gunzip(pkg_meta_gz_path);
-        if (rc1 || rc2)
+
+        rc1 = gunzip(repo_gz_path);
+        if (rc1)
                 return 2;
 
-        json_object *formatted_repodata = get_formatted_repo_data();
-
+        json_object *formatted_repodata = format_repo(repo_path);
         if (json_object_to_file(repo_path, formatted_repodata) < 0)
                 return 3;
 
@@ -117,8 +74,7 @@ int init_repo_data(void)
                         fprintf(stderr, "failed to re-download repos.\n");
                         return 1;
                 }
-                j = json_object_from_file(repo_path);
-                if (j == NULL) {
+                if (repo_data == NULL) {
                         fprintf(stderr, "failed to parse newly downloaded repos. possible serverside issue?\n");
                         return 1;
                 }

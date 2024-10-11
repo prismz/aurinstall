@@ -5,8 +5,6 @@
 #include <alpm.h>
 
 extern char *cache_path;
-extern char *packages_path;
-extern char *metadata_path;
 extern char *repo_path;
 extern char *root_program;  /* sudo/doas/other */
 extern alpm_handle_t *alpm_handle;

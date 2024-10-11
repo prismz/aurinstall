@@ -7,8 +7,6 @@
 
 /* global variables */
 char *cache_path;
-char *packages_path;
-char *metadata_path;
 char *repo_path;
 char *root_program;  /* sudo/doas/other */
 alpm_handle_t *alpm_handle;
@@ -33,9 +31,7 @@ static int read_opts_from_config(void)
 int init()
 {
         cache_path    = "/home/anon/.cache/aurinstall/";
-        packages_path = "/home/anon/.cache/aurinstall/packages";
         repo_path     = "/home/anon/.cache/aurinstall/aur-repo.json";
-        metadata_path = "/home/anon/.cache/aurinstall/metadata";
         root_program  = "sudo";
 
         if (read_opts_from_config())

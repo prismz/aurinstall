@@ -1,3 +1,6 @@
+TODO:
+- make a cache folder if it doesn't exist (idk how i forgot this)
+
 General:
 - download the AUR metadata like pacman does repositories, and simply filter
 through it on disk. This would likely be faster.
