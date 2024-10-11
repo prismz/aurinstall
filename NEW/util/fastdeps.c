@@ -71,6 +71,31 @@ TargetList *targetlist_new(size_t capacity)
         return tl;
 }
 
+void target_free(Target *t)
+{
+        if (t == NULL)
+                return;
+        free(t->name);
+        free(t->desc);
+        free(t->version);
+
+        targetlist_free(t->depends);
+        targetlist_free(t->makedepends);
+
+        free(t);
+}
+
+void targetlist_free(TargetList *tl)
+{
+        if (tl == NULL)
+                return;
+
+        for (size_t i = 0; i < tl->n; i++)
+                target_free(tl->targets[i]);
+        free(tl->targets);
+        free(tl);
+}
+
 int targetlist_append(TargetList *tl, Target *t)
 {
         if (tl == NULL || tl->targets == NULL || t == NULL)
@@ -140,6 +165,7 @@ TargetList *get_target_list(const char **target_names, int n)
         return tl;
 }
 
+<<<<<<< HEAD:NEW/util/fastdeps.c
 void _print_targetlist(TargetList *tl, int depth, bool are_makedepends)
 {
         if (tl == NULL)
@@ -165,6 +191,32 @@ void _print_targetlist(TargetList *tl, int depth, bool are_makedepends)
 #define print_targetlist(tl) (_print_targetlist(tl, 0, false))
 
 int _main(void)
+=======
+TargetList *get_full_targets(const char **names, int n)
+{
+        if (names == NULL || n < 1)
+                return NULL;
+
+        TargetList *tl = targetlist_new(n);
+
+        for (int i = 0; i < n; i++) {
+                const char *name = names[i];
+                if (name == NULL)
+                        break;
+
+                Target *t = target_new(name);
+
+                if (targetlist_append(tl, t)) {
+                        targetlist_free(tl);
+                        return NULL;
+                }
+        }
+
+        return tl;
+}
+
+int main(void)
+>>>>>>> 50ac14350f55f1726f7d96740b221bdfddcc4a89:NEW/fastdeps/fastdeps.c
 {
         clock_t begin = clock();
 

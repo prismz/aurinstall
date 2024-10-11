@@ -32,6 +32,8 @@ typedef struct fastdeps_targetlist{
 
 Target *target_new(const char *name);
 TargetList *targetlist_new(size_t capacity);
+void target_free(Target *t);
+void targetlist_free(TargetList *tl);
 int targetlist_append(TargetList *tl, Target *t);
 TargetList *parse_deplist(json_object *deps);
 json_object *package_get_metadata(const char *name);
