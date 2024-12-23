@@ -1,0 +1,51 @@
+Rewrite of aurinstall with better dependency resolution and speed in mind
+
+* GOALS:
+- speed (otherwise why use this over yay?)
+- security (old version would simply call system())
+- as few dependencies as possible (database [json at the moment], libcurl, git, anything from base-devel can be assumed)
+- as little user interaction required as possible,
+  yay will ask you multiple questions for each package if there are AUR dependencies.
+  as many confirmations and prompts as possible should be up front,
+  and give them an option for --noconfirm (warn them however unless we eventually
+  process everything up front).
+- flexibility (choose between repository on disk versus web-API [AUR RPC],
+  at some point maybe make a universal interface that works with both under the hood)
+- fix other issues with the original, many outlined here:
+    https://www.reddit.com/r/C_Programming/comments/12rgopg/aurinstall_an_aur_helper_written_completely_in_c/
+
+* TODO:
+
+PACKAGE INSTALLATION
+- INCOMPLETE - this is the main thing
+- allow the user to read .PKGBUILDS
+- on fail should give the user choices:
+  - go to the build directory and fix it themselves
+  - attempt a clean build
+  - skip the parent package (package that has the package that failed to build as a dependency)
+    - ask to remove unneeded build dependencies/dependencies already installed
+  - exit program
+
+CACHE
+- automatic cache folder creation at ~/.cache/aurinstall
+- ability to remove cache
+
+REPO
+- when we download the repo from the AUR website and format it,
+  make sure it is in a way that we do not have to iterate through the repo ever,
+  everything should be key-based access for speed
+- store packages that are provided with a list of their providers
+  (anaconda/miniconda3/miniforge, source vs. binary versions of certain packages)
+  so that if one of the providers fails to build we can prompt the user to try another.
+- read note on flexibility above
+
+SEARCH
+- code from the old program is pretty good (in my opinion),
+  maybe add more types of search and sorting? (search descriptions, by maintainer, popularity, etc)
+
+MISC
+- argument parsing
+- multithreading
+- configuration file (maybe with first time wizard depending on options added)
+- beautiful output, i want this to one day be hands down the best looking AUR helper (and hopefully the fastest),
+  obviously this is not at all a major priority.
