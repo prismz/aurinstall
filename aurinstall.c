@@ -11,4 +11,7 @@ int main(void)
 
         const char *targets[8] = { "osu-lazer-bin", "librewolf", "qtcreator-git", "firefox" };
         install_packages(targets, 4);
+        
+        free(cache_path);
+        free(repo_path);
 }

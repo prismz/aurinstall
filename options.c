@@ -30,9 +30,14 @@ static int read_opts_from_config(void)
 
 int init()
 {
-        cache_path    = "/home/anon/.cache/aurinstall/";
-        repo_path     = "/home/anon/.cache/aurinstall/aur-repo.json";
+        const char *home_path = getenv("HOME");
+
+        cache_path    = path_join(home_path, ".cache/aurinstall/");
+        repo_path     = path_join(home_path, ".cache/aurinstall/aur-repo.json");
         root_program  = "sudo";
+
+        if (!dir_exists(cache_path))
+                create_dir(cache_path);
 
         if (read_opts_from_config())
                 fatal_err("libalpm error");
