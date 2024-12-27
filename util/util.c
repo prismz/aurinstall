@@ -58,15 +58,19 @@ void warning(const char *fmt, ...)
         fprintf(stderr, "\n");
 }
 
-void create_dir(const char *path)
+bool create_dir(const char *path)
 {
-        size_t system_command_len = strlen(path) + 9;
-        char *system_command = safe_calloc(system_command_len, 1);
+        if (path == NULL)
+                return false;
 
-        snprintf(system_command, system_command_len, "mkdir -p %s", path);
-        system(system_command);
+        struct stat s = {0};
+        if (stat(path, &s) == -1)
+        {
+                mkdir(path, 0700);
+                return true;
+        }
 
-        free(system_command);
+        return false;
 }
 
 /* returns false if path doesn't exist, or path is a file */
