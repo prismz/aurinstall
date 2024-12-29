@@ -6,6 +6,7 @@
 void nonfatal_err(const char *fmt, ...);
 void fatal_err(const char *fmt, ...);
 void warning(const char *fmt, ...);
+bool create_dir(const char *path);
 bool dir_exists(const char *path);
 bool dir_is_empty(const char *path);
 char *path_join(const char *p1, const char *p2);

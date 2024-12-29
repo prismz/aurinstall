@@ -58,6 +58,21 @@ void warning(const char *fmt, ...)
         fprintf(stderr, "\n");
 }
 
+bool create_dir(const char *path)
+{
+        if (path == NULL)
+                return false;
+
+        struct stat s = {0};
+        if (stat(path, &s) == -1)
+        {
+                mkdir(path, 0700);
+                return true;
+        }
+
+        return false;
+}
+
 /* returns false if path doesn't exist, or path is a file */
 bool dir_exists(const char *path)
 {
